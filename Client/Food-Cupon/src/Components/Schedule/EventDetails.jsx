@@ -5,24 +5,36 @@ export default function EventDetails() {
   const { id } = useParams();
 
   const [event, setEvent] = useState(null);
-  const [mealDays, setMealDays] = useState([]); // { date: "...", meals: [{meal_name, meal_time}] }
+  const [mealDays, setMealDays] = useState([]);
   const [selectedDate, setSelectedDate] = useState("");
 
   const [loading, setLoading] = useState(true);
-  const [status, setStatus] = useState(1); // enabled/disabled flag
+  const [status, setStatus] = useState(1);
 
-  // Fetch event + meals
+  // Fetch event + meals on page load
   useEffect(() => {
     fetch(`http://localhost:5000/events/${id}`)
       .then((res) => res.json())
       .then((data) => {
         setEvent(data.event);
-        setMealDays(data.meals); // dynamic meals structure
+        setMealDays(data.meals);
         setStatus(data.event.enabled);
         setLoading(false);
       })
       .catch((err) => console.error("Error:", err));
   }, [id]);
+
+  // 🟢 Fetch meals again when selectedDate changes
+  useEffect(() => {
+    if (selectedDate) {
+      fetch(`http://localhost:5000/events/${id}`)
+        .then((res) => res.json())
+        .then((data) => {
+          setMealDays(data.meals);
+        })
+        .catch((err) => console.error("Error fetching meals:", err));
+    }
+  }, [selectedDate, id]);
 
   // Toggle event enabled/disabled
   const toggleEvent = () => {
@@ -34,8 +46,23 @@ export default function EventDetails() {
       .catch((err) => console.error("Toggle Error:", err));
   };
 
+  // Generate dates between start and end
+  const getDateRange = (start, end) => {
+    const dates = [];
+    let current = new Date(start);
+    const last = new Date(end);
+
+    while (current <= last) {
+      dates.push(current.toISOString().split("T")[0]);
+      current.setDate(current.getDate() + 1);
+    }
+    return dates;
+  };
+
   if (loading) return <p className="text-gray-400 p-8">Loading...</p>;
   if (!event) return <p className="text-gray-400 p-8">Event not found</p>;
+
+  const allDates = getDateRange(event.start_date, event.end_date);
 
   return (
     <div className="min-h-screen bg-gray-900 text-white p-8">
@@ -74,13 +101,13 @@ export default function EventDetails() {
         <label className="font-semibold">Select Date:</label>
         <select
           className="ml-3 p-2 bg-gray-800 rounded border border-gray-700"
+          value={selectedDate}
           onChange={(e) => setSelectedDate(e.target.value)}
         >
           <option value="">Select a date</option>
-
-          {mealDays.map((day) => (
-            <option key={day.date} value={day.date}>
-              {day.date}
+          {allDates.map((date) => (
+            <option key={date} value={date}>
+              {date}
             </option>
           ))}
         </select>
@@ -89,28 +116,29 @@ export default function EventDetails() {
       {/* Meal Display */}
       {selectedDate && (
         <div className="bg-gray-800 p-6 rounded-lg shadow-lg border border-gray-700 w-full md:w-2/3">
-
           <h2 className="text-xl font-semibold mb-4 text-purple-400">
             Meal Schedule for {selectedDate}
           </h2>
 
-          {mealDays
-            .filter((d) => d.date === selectedDate)
-            .map((day) => (
-              <div key={day.date} className="space-y-2 text-gray-300">
-                
-                {/* Dynamic Rendering of All Meals */}
-                {day.meals.length === 0 && (
-                  <p className="text-gray-400">No meals scheduled for this date.</p>
-                )}
-
-                {day.meals.map((meal, index) => (
-                  <p key={index}>
-                    <b>{meal.meal_name}:</b> {meal.meal_time}
-                  </p>
-                ))}
-              </div>
-            ))}
+          {mealDays.some((d) => d.date.slice(0, 10) === selectedDate) ? (
+            mealDays
+              .filter((d) => d.date.slice(0, 10) === selectedDate)
+              .map((day) => (
+                <div key={day.date} className="space-y-3 text-gray-300">
+                  {day.meals.map((meal, index) => (
+                    <div
+                      key={index}
+                      className="flex justify-between bg-gray-700 p-3 rounded-lg border border-gray-600"
+                    >
+                      <span className="font-semibold">{meal.meal_name}</span>
+                      <span>{meal.start_time?.slice(0,5)} - {meal.end_time?.slice(0,5)}</span>
+                    </div>
+                  ))}
+                </div>
+              ))
+          ) : (
+            <p className="text-gray-400">No meals scheduled for this date.</p>
+          )}
         </div>
       )}
     </div>
