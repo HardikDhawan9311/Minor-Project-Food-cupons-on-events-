@@ -17,12 +17,14 @@ app.use(cors());
 const authRoutes = require("./src/routes/authRoutes");
 const participantRoutes= require("./src/routes/participantRoutes")
 const emailRoutes = require("./src/routes/emailRoutes");
+const eventRoutes = require("./src/routes/eventRoutes");
 
 // Use routes
 app.use("/auth", authRoutes);
 app.use("/participants",participantRoutes)
 app.use("/emails", emailRoutes);
 app.use("/generation",emailRoutes)
+app.use("/events", eventRoutes);
 
 // Start server
 const PORT = process.env.PORT || 5000;
