@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
-import { Calendar, Clock } from "lucide-react"; // icons for UI
+import { Calendar, Clock } from "lucide-react";
+import { Link } from "react-router-dom";   // ⭐ Add this
 
 export default function Schedule() {
   const [events, setEvents] = useState([]);
@@ -40,34 +41,35 @@ export default function Schedule() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 
           {events.map((event) => (
-            <div
+            <Link 
               key={event.event_id}
-              className="bg-gray-800 p-6 rounded-xl shadow-lg border border-gray-700 
-                         transition-transform duration-200 hover:scale-[1.02] hover:border-purple-500"
+              to={`/schedule/${event.event_id}`}   // ⭐ Navigate to EventDetails page
+              className="block"
             >
-              {/* Event Name */}
-              <h2 className="text-2xl font-semibold text-purple-400 mb-4 flex items-center gap-2">
-                <Calendar size={22} /> {event.event_name}
-              </h2>
+              <div
+                className="bg-gray-800 p-6 rounded-xl shadow-lg border border-gray-700 
+                           transition-transform duration-200 hover:scale-[1.02] hover:border-purple-500 cursor-pointer"
+              >
+                <h2 className="text-2xl font-semibold text-purple-400 mb-4 flex items-center gap-2">
+                  <Calendar size={22} /> {event.event_name}
+                </h2>
 
-              {/* Event Dates */}
-              <div className="space-y-2 text-gray-300">
+                <div className="space-y-2 text-gray-300">
+                  <p className="flex items-center gap-2">
+                    <Clock size={16} className="text-green-400" />
+                    <span className="font-semibold">Start:</span>{" "}
+                    {new Date(event.start_date).toLocaleDateString()}
+                  </p>
 
-                <p className="flex items-center gap-2">
-                  <Clock size={16} className="text-green-400" />
-                  <span className="font-semibold">Start:</span>{" "}
-                  {new Date(event.start_date).toLocaleDateString()}
-                </p>
-
-                <p className="flex items-center gap-2">
-                  <Clock size={16} className="text-red-400" />
-                  <span className="font-semibold">End:</span>{" "}
-                  {new Date(event.end_date).toLocaleDateString()}
-                </p>
+                  <p className="flex items-center gap-2">
+                    <Clock size={16} className="text-red-400" />
+                    <span className="font-semibold">End:</span>{" "}
+                    {new Date(event.end_date).toLocaleDateString()}
+                  </p>
+                </div>
 
               </div>
-
-            </div>
+            </Link>
           ))}
 
         </div>

@@ -8,6 +8,7 @@ import ImportPage from "./Components/Import/Import_Page";
 import LogsPage from "./Components/Logs_Page/logs_page";
 import ProtectedRoute from "./Components/ProtectedRoute";
 import Schedule from "./Components/Schedule/Schedule";
+import EventDetails from "./Components/Schedule/EventDetails";
 import { getToken } from "./utils/auth"; // ✅ make sure this path matches your folder structure
 
 function App() {
@@ -70,6 +71,15 @@ function App() {
                <Schedule />
             
           }
+        />
+
+        <Route
+          path="/schedule/:id"
+          element={
+            
+             <EventDetails />
+            
+            }
         />
       
       </Routes>        
