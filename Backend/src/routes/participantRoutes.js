@@ -4,6 +4,7 @@ const {
   uploadExcel,
   getParticipants,
   getTeamParticipants,
+  markMealEaten,
 } = require("../controllers/participantController");
 
 const router = express.Router();
@@ -37,5 +38,8 @@ router.get("/logs", asyncHandler(getParticipants));
 
 // ✅ New route for a specific team
 router.get("/team/:teamName", asyncHandler(getTeamParticipants));
+
+// ✅ New route for QR scan marking meal as eaten
+router.post("/scan", asyncHandler(markMealEaten));
 
 module.exports = router;

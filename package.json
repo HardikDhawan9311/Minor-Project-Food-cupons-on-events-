@@ -13,7 +13,9 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "dev:backend": "npm run dev --prefix Backend",
-    "dev:client": "npm run dev --prefix Client/Food-Cupon"
+    "dev:client": "npm run dev --prefix Client/Food-Cupon",
+    "dev:qr": "cd Qr-service && .\\venv\\Scripts\\python.exe -m uvicorn main:app --reload --port 8000",
+    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:client\" \"npm run dev:qr\""
   },
   "repository": {
     "type": "git",

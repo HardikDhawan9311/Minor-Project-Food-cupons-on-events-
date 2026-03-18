@@ -422,6 +422,7 @@ exports.getEventDetails = async (req, res) => {
     // ✅ FORCE DATE AS STRING (NO TIMEZONE)
     const [meals] = await db.execute(
       `SELECT 
+         meal_id,
          DATE_FORMAT(date, '%Y-%m-%d') AS date,
          meal_name,
          start_time,
@@ -438,6 +439,7 @@ exports.getEventDetails = async (req, res) => {
       }
 
       acc[row.date].meals.push({
+        meal_id: row.meal_id,
         meal_name: row.meal_name,
         start_time: row.start_time,
         end_time: row.end_time,
@@ -532,6 +534,7 @@ exports.getEventMeals = async (req, res) => {
   try {
     const [meals] = await db.execute(
       `SELECT 
+         meal_id,
          DATE_FORMAT(date, '%Y-%m-%d') AS date,
          meal_name,
          start_time,
@@ -546,5 +549,33 @@ exports.getEventMeals = async (req, res) => {
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: "Meal fetch failed" });
+  }
+};
+
+
+/* =======================
+   DELETE EVENT
+======================= */
+exports.deleteEvent = async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    // Delete child records first to avoid FK constraint errors
+    await db.execute(`DELETE FROM event_meals WHERE event_id = ?`, [id]);
+    await db.execute(`DELETE FROM participants WHERE event_id = ?`, [id]);
+
+    const [result] = await db.execute(
+      `DELETE FROM events WHERE event_id = ?`,
+      [id]
+    );
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ message: "Event not found" });
+    }
+
+    res.status(200).json({ message: "Event deleted successfully" });
+  } catch (error) {
+    console.error("❌ deleteEvent error:", error);
+    res.status(500).json({ message: "Failed to delete event", error: error.message });
   }
 };

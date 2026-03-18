@@ -29,10 +29,10 @@ pip install -r requirements.txt"
 
 Run the FastAPI server
 
-"uvicorn main:app --host 0.0.0.0 --port 4000"
+"uvicorn main:app --host 0.0.0.0 --port 8000"
 
 
-The service will run at http://localhost:4000
+The service will run at http://localhost:8000
 
 Endpoint for QR generation: POST /generate_qr
 ----------------------------------------------------------------------------------
@@ -51,7 +51,7 @@ Example Node.js call using Axios:
 
 const axios = require("axios");
 
-const response = await axios.post("http://localhost:5000/generate_qr", {
+const response = await axios.post("http://localhost:8000/generate_qr", {
   token_id: "ABC123"
 });
 
@@ -64,7 +64,7 @@ Integration Notes
 
 The service runs independently; no changes are needed in the frontend or backend.
 
-Make sure port 5000 is open and accessible from the Node.js backend.
+Make sure port 8000 is open and accessible from the Node.js backend.
 
 This setup works locally for testing before deploying the QR service to the cloud.
 
@@ -72,7 +72,7 @@ This setup works locally for testing before deploying the QR service to the clou
 -------------------------------------------------------------------------------
 
 To check POST method on server use this command on powershell :
-Invoke-RestMethod -Uri http://127.0.0.1:5000/generate_qr `
+Invoke-RestMethod -Uri http://127.0.0.1:8000/generate_qr `
   -Method POST `
   -Body (@{token_id="TEST123"} | ConvertTo-Json) `
   -ContentType "application/json"
