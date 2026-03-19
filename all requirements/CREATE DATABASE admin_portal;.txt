@@ -1,0 +1,22 @@
+CREATE DATABASE admin_portal;
+
+USE admin_portal;
+
+CREATE TABLE participants (
+  id INT NOT NULL AUTO_INCREMENT,
+  team_name VARCHAR(100) NOT NULL,
+  name VARCHAR(100) NOT NULL,
+  email VARCHAR(150) NOT NULL,
+  check_in ENUM('Yes','No') DEFAULT 'No',
+  meal_eaten TINYINT(1) NOT NULL DEFAULT '0',
+  token_id VARCHAR(100) DEFAULT NULL,
+  enable_disable TINYINT(1) NOT NULL DEFAULT '0',
+  qr_cod` LONGTEXT)
+
+
+CREATE TABLE users (
+  id int NOT NULL AUTO_INCREMENT,
+  name varchar(100) NOT NULL,
+  email varchar(100) NOT NULL,
+  username varchar(50) NOT NULL,
+  password varchar(255) NOT NULL)

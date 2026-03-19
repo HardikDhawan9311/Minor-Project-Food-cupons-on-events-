@@ -1,0 +1,15 @@
+To do task 
+
+1. jwt implementation 
+2 .creating a session 
+3. making session stable for 1 hr and after this. if user is on the website then it will automatically extend session if not then we will expire the session.
+4. connection with the backend and frontend of sigin and signup 
+5. scan option will access the camera.
+
+
+
+for activating venv 
+venv\Scripts\Activate
+
+for running the port 
+uvicorn main:app --host 0.0.0.0 --port 4000
