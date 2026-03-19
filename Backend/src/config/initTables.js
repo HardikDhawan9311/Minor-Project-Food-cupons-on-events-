@@ -19,7 +19,7 @@ const initTables = async () => {
     )`,
     `CREATE TABLE IF NOT EXISTS events (
       event_id INT AUTO_INCREMENT PRIMARY KEY,
-      event_name VARCHAR(255) NOT NULL,
+      event_name VARCHAR(255) UNIQUE NOT NULL,
       start_date DATE NOT NULL,
       end_date DATE NOT NULL,
       enabled BOOLEAN DEFAULT TRUE,

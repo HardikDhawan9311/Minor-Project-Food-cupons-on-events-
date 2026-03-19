@@ -103,6 +103,13 @@ export default function EditEvent() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ date: selectedDate, meals: combinedMeals }),
       });
+
+      if (!res.ok) {
+        const d = await res.json();
+        alert(`Failed to save meals: ${d.message || "Unknown error"}`);
+        return;
+      }
+
       setTempMeals([]);
       // Refresh meal list
       const refreshRes = await fetch(`http://localhost:5000/events/${id}`);

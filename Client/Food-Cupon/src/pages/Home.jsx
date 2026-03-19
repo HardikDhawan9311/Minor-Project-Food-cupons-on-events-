@@ -13,6 +13,7 @@ export default function Home() {
     end_date: "",
   });
   const [events, setEvents] = useState([]);
+  const [error, setError] = useState("");
 
   useEffect(() => {
     fetchEvents();
@@ -29,14 +30,29 @@ export default function Home() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    await fetch("http://localhost:5000/events/create", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(eventData),
-    });
-    setShowEventForm(false);
-    setEventData({ event_name: "", start_date: "", end_date: "" });
-    fetchEvents();
+    setError("");
+    
+    try {
+      const res = await fetch("http://localhost:5000/events/create", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(eventData),
+      });
+      
+      const data = await res.json();
+      
+      if (!res.ok) {
+        setError(data.message || "Failed to create event");
+        return;
+      }
+
+      setShowEventForm(false);
+      setEventData({ event_name: "", start_date: "", end_date: "" });
+      fetchEvents();
+    } catch (err) {
+      setError("Server connection failed. Please try again.");
+      console.error("Create event error:", err);
+    }
   };
 
   const getEventStatus = (start, end) => {
@@ -105,7 +121,10 @@ export default function Home() {
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                onClick={() => setShowEventForm(false)}
+                onClick={() => {
+                  setShowEventForm(false);
+                  setError("");
+                }}
                 className="absolute inset-0 bg-black/60 backdrop-blur-md"
               />
 
@@ -120,6 +139,20 @@ export default function Home() {
                 <div className="absolute -top-24 -left-24 w-64 h-64 bg-[#7F5AF0]/20 blur-[100px]" />
                 
                 <div className="relative z-10">
+                  <AnimatePresence>
+                    {error && (
+                      <motion.div
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: "auto" }}
+                        exit={{ opacity: 0, height: 0 }}
+                        className="mb-6 p-4 bg-red-500/10 border border-red-500/20 rounded-2xl text-red-400 text-sm font-medium flex items-center gap-3 overflow-hidden"
+                      >
+                        <div className="w-2 h-2 bg-red-400 rounded-full shrink-0" />
+                        {error}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                  
                   <div className="flex justify-between items-center mb-8">
                     <div>
                       <h2 className="text-3xl font-bold text-white flex items-center gap-3">
@@ -129,7 +162,10 @@ export default function Home() {
                       <p className="text-gray-400 mt-1">Set up your next hackathon experience</p>
                     </div>
                     <button
-                      onClick={() => setShowEventForm(false)}
+                      onClick={() => {
+                        setShowEventForm(false);
+                        setError("");
+                      }}
                       className="p-2 bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white rounded-full transition-all"
                     >
                       <X size={24} />

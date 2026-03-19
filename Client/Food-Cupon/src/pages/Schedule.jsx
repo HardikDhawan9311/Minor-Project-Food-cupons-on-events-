@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from "react";
 import { Calendar, Clock, Pencil, QrCode } from "lucide-react";
 import { Link } from "react-router-dom";
-import Navbar from "../components/NavBar";
-import Footer from "../components/Footer";
-import QRScannerModal from "../components/QRScannerModal";
+import Navbar from "../Components/NavBar";
+import Footer from "../Components/Footer";
+import QRScannerModal from "../Components/QRScannerModal";
 
 export default function Schedule() {
   const [events, setEvents] = useState([]);
@@ -27,44 +27,62 @@ export default function Schedule() {
   const handleScanClick = async (event) => {
     setSelectedEvent(event);
     
-    // Try to find auto-meal
+    // Store all event meals to show in picker if needed
     try {
-      const res = await fetch(`http://localhost:5000/events/${event.event_id}/details`);
+      const res = await fetch(`http://localhost:5000/events/${event.event_id}`);
       const data = await res.json();
       
+      // Save all meals for the picker
+      const allMeals = [];
+      if (data.meals) {
+        data.meals.forEach(day => {
+          day.meals.forEach(meal => {
+            allMeals.push({
+              ...meal,
+              date: day.date
+            });
+          });
+        });
+      }
+      setSelectedEvent(prev => ({ ...prev, allMeals }));
+
+      // If we already have a persistent active meal for THIS event, use it
+      if (activeMeal && activeMeal.event_id === event.event_id) {
+        setShowScanner(true);
+        return;
+      }
+
+      // Otherwise try auto-detection
       const now = new Date();
       const currentTime = now.getHours() * 3600 + now.getMinutes() * 60 + now.getSeconds();
       const today = now.toISOString().split("T")[0];
 
       let currentMeal = null;
-      if (data.meals) {
-        // Find if any meal is happening NOW
-        data.meals.forEach(day => {
-          if (day.date === today) {
-            day.meals.forEach(meal => {
-              const [h1, m1, s1] = meal.start_time.split(":").map(Number);
-              const [h2, m2, s2] = meal.end_time.split(":").map(Number);
-              const start = h1 * 3600 + m1 * 60 + s1;
-              const end = h2 * 3600 + m2 * 60 + s2;
-              
-              if (currentTime >= start && currentTime <= end) {
-                currentMeal = meal;
-              }
-            });
+      allMeals.forEach(meal => {
+        if (meal.date === today) {
+          const [h1, m1, s1] = meal.start_time.split(":").map(Number);
+          const [h2, m2, s2] = meal.end_time.split(":").map(Number);
+          const start = h1 * 3600 + m1 * 60 + s1;
+          const end = h2 * 3600 + m2 * 60 + s2;
+          
+          if (currentTime >= start && currentTime <= end) {
+            currentMeal = meal;
           }
-        });
-      }
+        }
+      });
 
       if (currentMeal) {
-        setActiveMeal(currentMeal);
+        setActiveMeal({ ...currentMeal, event_id: event.event_id });
         setShowScanner(true);
       } else {
         setShowMealPicker(true);
       }
     } catch (err) {
+      console.error("Error fetching event meals:", err);
       setShowMealPicker(true);
     }
   };
+
 
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-br from-[#0F0C29] via-[#302B63] to-[#24243E] text-white">
@@ -150,29 +168,54 @@ export default function Schedule() {
       {showMealPicker && selectedEvent && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowMealPicker(false)}></div>
-          <div className="relative bg-[#1a1a2e] border border-white/20 rounded-3xl p-8 shadow-2xl w-full max-w-md">
-            <h2 className="text-2xl font-bold mb-6 text-white text-center">Select Meal Session</h2>
+          <div className="relative bg-[#1a1a2e] border border-white/20 rounded-3xl p-8 shadow-2xl w-full max-w-md max-h-[80vh] overflow-y-auto">
+            <h2 className="text-2xl font-bold mb-6 text-white text-center">Select Scan Session</h2>
             <div className="space-y-3">
               <button
                 onClick={() => {
-                  setActiveMeal({ meal_id: "check_in", meal_name: "Check-In" });
+                  setActiveMeal({ meal_id: "check_in", meal_name: "Check-In", event_id: selectedEvent.event_id });
                   setShowMealPicker(false);
                   setShowScanner(true);
                 }}
-                className="w-full p-4 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold transition text-left flex justify-between items-center"
+                className={`w-full p-4 rounded-2xl transition text-left flex justify-between items-center ${
+                  activeMeal?.meal_id === "check_in" ? "bg-indigo-600 ring-2 ring-white" : "bg-indigo-600/40 hover:bg-indigo-600/60"
+                }`}
               >
                 <span>🚀 Event Check-In</span>
-                <span className="text-xs bg-white/20 px-2 py-1 rounded">Required</span>
+                {activeMeal?.meal_id === "check_in" && <span className="text-xs bg-white text-indigo-600 px-2 py-1 rounded-full font-bold">Active</span>}
               </button>
               
               <div className="py-2 flex items-center gap-4">
                 <div className="flex-1 h-px bg-white/10"></div>
-                <span className="text-xs text-gray-500 uppercase tracking-widest">Or Select Meal</span>
+                <span className="text-xs text-gray-500 uppercase tracking-widest">Available Meals</span>
                 <div className="flex-1 h-px bg-white/10"></div>
               </div>
 
-              {/* Dynamic meals could go here, but for now we'll fetch them if needed or show a fallback */}
-              <p className="text-xs text-gray-400 text-center italic">Tip: Active meals are auto-selected</p>
+              {selectedEvent.allMeals && selectedEvent.allMeals.length > 0 ? (
+                selectedEvent.allMeals.map((meal) => (
+                  <button
+                    key={meal.meal_id}
+                    onClick={() => {
+                      setActiveMeal({ ...meal, event_id: selectedEvent.event_id });
+                      setShowMealPicker(false);
+                      setShowScanner(true);
+                    }}
+                    className={`w-full p-4 rounded-2xl transition text-left flex flex-col ${
+                      activeMeal?.meal_id === meal.meal_id ? "bg-[#7F5AF0] ring-2 ring-white text-white" : "bg-white/5 hover:bg-white/10 text-gray-300"
+                    }`}
+                  >
+                    <div className="flex justify-between items-center w-full">
+                      <span className="font-bold">{meal.meal_name}</span>
+                      {activeMeal?.meal_id === meal.meal_id && <span className="text-[10px] bg-white text-[#7F5AF0] px-2 py-1 rounded-full font-bold">Active</span>}
+                    </div>
+                    <span className="text-xs opacity-60 mt-1">
+                      {new Date(meal.date).toLocaleDateString()} | {meal.start_time.substring(0, 5)} - {meal.end_time.substring(0, 5)}
+                    </span>
+                  </button>
+                ))
+              ) : (
+                <p className="text-gray-500 text-center py-4 text-sm border border-dashed border-white/10 rounded-xl">No specific meals found</p>
+              )}
               
               <button
                 onClick={() => setShowMealPicker(false)}
@@ -185,14 +228,20 @@ export default function Schedule() {
         </div>
       )}
 
+
       {/* QR Scanner */}
       {showScanner && (
         <QRScannerModal
           onClose={() => setShowScanner(false)}
           eventId={selectedEvent.event_id}
           activeMeal={activeMeal}
+          onChangeMeal={() => {
+            setShowScanner(false);
+            setShowMealPicker(true);
+          }}
         />
       )}
+
     </div>
   );
 }

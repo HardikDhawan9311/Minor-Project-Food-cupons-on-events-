@@ -372,6 +372,15 @@ exports.createEvent = async (req, res) => {
   }
 
   try {
+    const [existing] = await db.execute(
+      "SELECT event_id FROM events WHERE LOWER(event_name) = LOWER(?)",
+      [event_name]
+    );
+
+    if (existing.length > 0) {
+      return res.status(400).json({ message: "An event with this name already exists" });
+    }
+
     const [result] = await db.execute(
       `INSERT INTO events (event_name, start_date, end_date)
        VALUES (?, ?, ?)`,

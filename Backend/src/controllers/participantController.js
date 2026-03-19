@@ -244,6 +244,29 @@ const markMealEaten = async (req, res) => {
 
     const participant = anyParticipant[0];
 
+    // 🚩 NEW: Handle Event Check-In session separately
+    if (meal_id === "check_in") {
+      if (participant.check_in === 1 || participant.check_in === "Yes" || participant.check_in === true) {
+        return res.status(400).json({ 
+          error: `⚠️ ${participant.name} is already checked in.`,
+          already_checked_in: true 
+        });
+      }
+
+      await db.execute(
+        "UPDATE participants SET check_in = 1 WHERE id = ?",
+        [participant.id]
+      );
+
+      return res.json({
+        message: `✅ Check-In successful for ${participant.name}!`,
+        name: participant.name,
+        team_name: participant.team_name,
+        check_in: true,
+        summary: "Checked in successfully"
+      });
+    }
+
     // 🚩 NEW: Block meal scans if participant has not checked in (registration requirement)
     if (!participant.check_in || participant.check_in === "No" || participant.check_in === 0) {
       return res.status(403).json({
@@ -310,6 +333,7 @@ const markMealEaten = async (req, res) => {
     res.json({
       message: `✅ ${mealName} recorded for ${participant.name}!`,
       name: participant.name,
+      team_name: participant.team_name,
       meal: mealName,
       meals_eaten: eaten,
       total_meals: total,
