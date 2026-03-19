@@ -351,7 +351,7 @@ export default function EventDetails() {
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ eventId: id }),
+          body: JSON.stringify({ event_id: id }),
         }
       );
 
@@ -364,11 +364,11 @@ export default function EventDetails() {
 
       /* 2️⃣ Send Email */
       const emailRes = await fetch(
-        "http://localhost:5000/emails/send",
+        "http://localhost:5000/emails/send-all",
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ eventId: id }),
+          body: JSON.stringify({ event_id: id }),
         }
       );
 

@@ -109,7 +109,7 @@ const uploadExcel = async (req, res) => {
 
       try {
         const token_id = await getUniqueToken(teamname, name, email);
-        const isCheckedIn = (checkin?.toString().toLowerCase().trim() === "yes") ? "Yes" : "No";
+        const isCheckedIn = (checkin?.toString().toLowerCase().trim() === "yes") ? 1 : 0;
         
         console.log(`📝 Inserting row ${index + 2}: ${name} (${email})`);
         const [result] = await db.execute(

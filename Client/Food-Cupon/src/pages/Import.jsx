@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { UploadCloud, FileSpreadsheet } from "lucide-react";
 import Navbar from "../components/NavBar";
@@ -6,6 +6,22 @@ import Navbar from "../components/NavBar";
 export default function ImportPage() {
   const [file, setFile] = useState(null);
   const [message, setMessage] = useState("");
+  const [events, setEvents] = useState([]);
+  const [selectedEvent, setSelectedEvent] = useState("");
+
+  useEffect(() => {
+    fetchEvents();
+  }, []);
+
+  const fetchEvents = async () => {
+    try {
+      const res = await axios.get("http://localhost:5000/events");
+      setEvents(res.data || []);
+      if (res.data?.length) setSelectedEvent(res.data[0].event_id);
+    } catch (err) {
+      console.error("Failed to fetch events:", err);
+    }
+  };
 
   const handleFileChange = (e) => {
     setFile(e.target.files[0]);
@@ -17,7 +33,13 @@ export default function ImportPage() {
       return;
     }
 
+    if (!selectedEvent) {
+      setMessage("⚠️ Please select an event first");
+      return;
+    }
+
     const formData = new FormData();
+    formData.append("event_id", selectedEvent);
     formData.append("file", file);
 
     try {
@@ -27,7 +49,14 @@ export default function ImportPage() {
         { headers: { "Content-Type": "multipart/form-data" } }
       );
 
-      setMessage(`✅ ${response.data.message || "File uploaded successfully!"}`);
+      const { inserted = 0, errors = 0 } = response.data;
+      if (inserted === 0 && errors > 0) {
+        setMessage(`❌ 0 added. ${errors} failed. Please check the file and try again.`);
+      } else if (errors > 0) {
+        setMessage(`⚠️ ${inserted} added. ${errors} failed.`);
+      } else {
+        setMessage(`✅ ${inserted} participants added successfully!`);
+      }
       setFile(null);
     } catch (err) {
       console.error(err);
@@ -51,6 +80,28 @@ export default function ImportPage() {
             <p className="text-gray-300 text-sm mt-1">
               Upload an Excel file (.xls or .xlsx)
             </p>
+          </div>
+
+          {/* Event Selector */}
+          <div className="mb-6">
+            <label className="block text-sm font-medium text-gray-300 mb-2">
+              Select Event
+            </label>
+            <select
+              value={selectedEvent}
+              onChange={(e) => setSelectedEvent(e.target.value)}
+              className="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-3 outline-none focus:border-[#C77DFF] transition"
+            >
+              {events.length === 0 ? (
+                <option value="" className="text-black">No events available</option>
+              ) : (
+                events.map((e) => (
+                  <option key={e.event_id} value={e.event_id} className="text-black">
+                    {e.event_name}
+                  </option>
+                ))
+              )}
+            </select>
           </div>
 
           {/* Upload Box */}
