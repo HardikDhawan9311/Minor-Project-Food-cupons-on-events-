@@ -6,7 +6,8 @@ const {
   getEventDetails, 
   toggleEvent, 
   saveAllMeals,
-  getEventMeals      // ⭐ Add this import
+  getEventMeals,
+  deleteEvent
 } = require("../controllers/eventController");
 
 // Create Event
@@ -26,5 +27,8 @@ router.put("/:id/toggle", toggleEvent);
 
 // Save all meals for one date
 router.post("/:id/meals/saveAll", saveAllMeals);
+
+// Delete event
+router.delete("/:id", deleteEvent);
 
 module.exports = router;

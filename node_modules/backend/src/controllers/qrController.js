@@ -5,7 +5,7 @@ const axios = require("axios");
 const autoGenerateQrCodes = async (req, res) => {
   try {
     // 1️⃣ Fetch token IDs
-    const [rows] = await (await db).execute("SELECT token_id FROM participants");
+    const [rows] = await db.execute("SELECT token_id FROM participants");
     const token_ids = rows.map((r) => r.token_id);
 
     if (!token_ids.length) {
@@ -13,7 +13,7 @@ const autoGenerateQrCodes = async (req, res) => {
     }
 
     // 2️⃣ FastAPI QR generator URL
-    const QR_BATCH_URL = "http://localhost:4000/generate_qr_batch";
+    const QR_BATCH_URL = "http://localhost:8000/generate_qr_batch";
 
     // 3️⃣ Prepare payload
     const payload = {
@@ -27,7 +27,7 @@ const autoGenerateQrCodes = async (req, res) => {
 
     // 5️⃣ Store each QR code in DB
     for (const qr of qrResults) {
-      await (await db).execute(
+      await db.execute(
         "UPDATE participants SET qr_code = ? WHERE token_id = ?",
         [qr.qr_base64, qr.token_id]
       );

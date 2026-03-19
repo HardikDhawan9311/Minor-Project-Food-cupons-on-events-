@@ -52,15 +52,15 @@ export default function Logs() {
     groupByTeam(participants);
   }, [search]);
 
-  const getBoxColor = (check_in, meal_eaten) => {
-    if (check_in === "No") return "bg-black";
-    if (meal_eaten === 1) return "bg-green-500";
+  const getBoxColor = (check_in, meals_eaten) => {
+    if (check_in === "No" || check_in === 0) return "bg-black";
+    if (meals_eaten > 0) return "bg-green-500";
     return "bg-red-500";
   };
 
-  const totalEaten = participants.filter((p) => p.meal_eaten === 1).length;
-  const totalNotEaten = participants.filter((p) => p.meal_eaten === 0).length;
-  const checkedIn = participants.filter((p) => p.check_in === "Yes").length;
+  const totalEaten = participants.filter((p) => p.meals_eaten > 0).length;
+  const totalNotEaten = participants.filter((p) => p.meals_eaten === 0).length;
+  const checkedIn = participants.filter((p) => p.check_in === "Yes" || p.check_in === 1).length;
 
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-br from-[#0F0C29] via-[#302B63] to-[#24243E] text-white">
@@ -135,7 +135,7 @@ export default function Logs() {
                       key={m.id}
                       className={`w-11 h-11 rounded-lg ${getBoxColor(
                         m.check_in,
-                        m.meal_eaten
+                        m.meals_eaten
                       )} relative group hover:scale-110 transition`}
                     >
                       <div className="absolute -top-9 left-1/2 -translate-x-1/2 bg-black/80 px-3 py-1 rounded text-xs opacity-0 group-hover:opacity-100">
