@@ -11,6 +11,9 @@ export default function Schedule() {
   const [showScanner, setShowScanner] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState(null);
 
+  const [activeMeal, setActiveMeal] = useState(null);
+  const [showMealPicker, setShowMealPicker] = useState(false);
+
   useEffect(() => {
     fetch("http://localhost:5000/events")
       .then((res) => res.json())
@@ -21,13 +24,55 @@ export default function Schedule() {
       .catch(() => setLoading(false));
   }, []);
 
+  const handleScanClick = async (event) => {
+    setSelectedEvent(event);
+    
+    // Try to find auto-meal
+    try {
+      const res = await fetch(`http://localhost:5000/events/${event.event_id}/details`);
+      const data = await res.json();
+      
+      const now = new Date();
+      const currentTime = now.getHours() * 3600 + now.getMinutes() * 60 + now.getSeconds();
+      const today = now.toISOString().split("T")[0];
+
+      let currentMeal = null;
+      if (data.meals) {
+        // Find if any meal is happening NOW
+        data.meals.forEach(day => {
+          if (day.date === today) {
+            day.meals.forEach(meal => {
+              const [h1, m1, s1] = meal.start_time.split(":").map(Number);
+              const [h2, m2, s2] = meal.end_time.split(":").map(Number);
+              const start = h1 * 3600 + m1 * 60 + s1;
+              const end = h2 * 3600 + m2 * 60 + s2;
+              
+              if (currentTime >= start && currentTime <= end) {
+                currentMeal = meal;
+              }
+            });
+          }
+        });
+      }
+
+      if (currentMeal) {
+        setActiveMeal(currentMeal);
+        setShowScanner(true);
+      } else {
+        setShowMealPicker(true);
+      }
+    } catch (err) {
+      setShowMealPicker(true);
+    }
+  };
+
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-br from-[#0F0C29] via-[#302B63] to-[#24243E] text-white">
       
-      {/* 🔹 Navbar */}
+      {/* Navbar */}
       <Navbar />
 
-      {/* 🔹 Content */}
+      {/* Content */}
       <main className="flex-1 px-6 py-10">
         
         {/* Header */}
@@ -66,13 +111,11 @@ export default function Schedule() {
                 <div className="space-y-2 text-gray-300">
                   <p className="flex items-center gap-2">
                     <Clock size={16} className="text-green-400" />
-                    Start:{" "}
-                    {new Date(event.start_date).toLocaleDateString()}
+                    Start: {new Date(event.start_date).toLocaleDateString()}
                   </p>
                   <p className="flex items-center gap-2">
                     <Clock size={16} className="text-red-400" />
-                    End:{" "}
-                    {new Date(event.end_date).toLocaleDateString()}
+                    End: {new Date(event.end_date).toLocaleDateString()}
                   </p>
                 </div>
 
@@ -87,10 +130,7 @@ export default function Schedule() {
                   </Link>
 
                   <button
-                    onClick={() => {
-                      setSelectedEvent(event);
-                      setShowScanner(true);
-                    }}
+                    onClick={() => handleScanClick(event)}
                     className="flex items-center gap-2 px-4 py-2 rounded-xl bg-green-600 hover:bg-green-700 transition"
                   >
                     <QrCode size={16} />
@@ -103,17 +143,54 @@ export default function Schedule() {
         )}
       </main>
 
-      {/* 🔹 Footer */}
+      {/* Footer */}
       <Footer />
 
-      {/* 🔹 QR Scanner */}
+      {/* Meal Selection Modal */}
+      {showMealPicker && selectedEvent && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowMealPicker(false)}></div>
+          <div className="relative bg-[#1a1a2e] border border-white/20 rounded-3xl p-8 shadow-2xl w-full max-w-md">
+            <h2 className="text-2xl font-bold mb-6 text-white text-center">Select Meal Session</h2>
+            <div className="space-y-3">
+              <button
+                onClick={() => {
+                  setActiveMeal({ meal_id: "check_in", meal_name: "Check-In" });
+                  setShowMealPicker(false);
+                  setShowScanner(true);
+                }}
+                className="w-full p-4 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold transition text-left flex justify-between items-center"
+              >
+                <span>🚀 Event Check-In</span>
+                <span className="text-xs bg-white/20 px-2 py-1 rounded">Required</span>
+              </button>
+              
+              <div className="py-2 flex items-center gap-4">
+                <div className="flex-1 h-px bg-white/10"></div>
+                <span className="text-xs text-gray-500 uppercase tracking-widest">Or Select Meal</span>
+                <div className="flex-1 h-px bg-white/10"></div>
+              </div>
+
+              {/* Dynamic meals could go here, but for now we'll fetch them if needed or show a fallback */}
+              <p className="text-xs text-gray-400 text-center italic">Tip: Active meals are auto-selected</p>
+              
+              <button
+                onClick={() => setShowMealPicker(false)}
+                className="mt-4 w-full py-3 rounded-xl bg-white/5 hover:bg-white/10 text-gray-400 text-sm transition"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* QR Scanner */}
       {showScanner && (
         <QRScannerModal
           onClose={() => setShowScanner(false)}
-          onScan={(value) => {
-            console.log("Scanned:", value);
-            setShowScanner(false);
-          }}
+          eventId={selectedEvent.event_id}
+          activeMeal={activeMeal}
         />
       )}
     </div>

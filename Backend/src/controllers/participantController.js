@@ -251,6 +251,13 @@ const markMealEaten = async (req, res) => {
       });
     }
 
+    // 🚩 NEW: Verify participant belongs to this specific event
+    if (participant.event_id !== parseInt(event_id)) {
+      return res.status(403).json({
+        error: "❌ This QR code belongs to another event.",
+      });
+    }
+
     // 3. Verify meal belongs to this event
     const [mealRows] = await db.execute(
       "SELECT * FROM event_meals WHERE meal_id = ? AND event_id = ?",

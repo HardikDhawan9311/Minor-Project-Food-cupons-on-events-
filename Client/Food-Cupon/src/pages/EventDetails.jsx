@@ -298,7 +298,9 @@
 
 
 import React, { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
+import { AlertCircle } from "lucide-react";
+import Navbar from "../components/NavBar";
 
 export default function EventDetails() {
   const { id } = useParams();
@@ -381,45 +383,85 @@ export default function EventDetails() {
     }
   };
 
+  // ✅ Toggle event enabled/disabled
+  const [status, setStatus] = useState(1);
+  useEffect(() => {
+    if (event) setStatus(event.enabled);
+  }, [event]);
+
+  const toggleEvent = () => {
+    fetch(`http://localhost:5000/events/${id}/toggle`, { method: "PUT" })
+      .then((res) => res.json())
+      .then(() => {
+        setStatus(status === 1 ? 0 : 1);
+      })
+      .catch((err) => console.error("Toggle Error:", err));
+  };
+
+  const deleteEvent = async () => {
+    if (window.confirm("Are you sure you want to delete this event? This will also delete all participants and meals.")) {
+      await fetch(`http://localhost:5000/events/${id}`, { method: "DELETE" });
+      navigate("/home");
+    }
+  };
+
+  const navigate = useNavigate();
+
   /* Loading & Error */
   if (loading) return <p className="text-gray-400 p-8">Loading...</p>;
-  if (!event) return <p className="text-gray-400 p-8">Event not found</p>;
+  if (!event) return <p className="text-gray-400 p-8 text-center mt-20 text-2xl font-bold">Event not found ❌</p>;
 
   const allDates = getDateRange(event.start_date, event.end_date);
 
   return (
-    <div className="min-h-screen bg-gray-900 text-white p-8">
+    <div className="min-h-screen bg-gradient-to-br from-[#0F0C29] via-[#302B63] to-[#24243E] text-white">
+      <Navbar />
 
-      {/* Header */}
-      <div className="flex justify-between items-center mb-4">
-        <h1 className="text-3xl font-bold">{event.event_name}</h1>
+      <main className="max-w-6xl mx-auto px-6 py-10">
+        {/* Header */}
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-8">
+          <div>
+            <h1 className="text-4xl font-bold mb-2">{event.event_name}</h1>
+            <p className="text-gray-300">
+              📆 {new Date(event.start_date).toLocaleDateString()} →{" "}
+              {new Date(event.end_date).toLocaleDateString()}
+            </p>
+          </div>
 
-        <button
-          onClick={sendEmail}
-          disabled={emailStatus === "sending"}
-          className="px-5 py-2 rounded-lg font-semibold transition 
-          bg-purple-600 hover:bg-purple-700 disabled:opacity-50"
-        >
-          {emailStatus === "sending" ? "Sending..." : "Send Email"}
-        </button>
-      </div>
+          <div className="flex flex-wrap gap-3">
+            <button
+              onClick={toggleEvent}
+              className={`px-6 py-2 rounded-xl font-bold transition shadow-lg ${
+                status === 1 ? "bg-red-600 hover:bg-red-700" : "bg-green-600 hover:bg-green-700"
+              }`}
+            >
+              {status === 1 ? "Disable QR Scanning" : "Enable QR Scanning"}
+            </button>
 
-      {/* Status Message */}
-      {emailStatus && (
-        <p
-          className={`mb-4 text-sm font-medium ${
-            emailStatus === "success"
-              ? "text-green-400"
-              : emailStatus === "sending"
-              ? "text-yellow-400"
-              : "text-red-400"
-          }`}
-        >
-          {emailStatus === "sending" && "📨 Generating QR & sending emails..."}
-          {emailStatus === "success" && "✅ QR generated & emails sent successfully"}
-          {emailStatus === "error" && "❌ Failed to generate QR or send email"}
-        </p>
-      )}
+            <button
+              onClick={sendEmail}
+              disabled={emailStatus === "sending"}
+              className="px-6 py-2 rounded-xl font-bold bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 transition shadow-lg"
+            >
+              {emailStatus === "sending" ? "Sending..." : "Send QR Emails"}
+            </button>
+
+            <button
+              onClick={deleteEvent}
+              className="px-4 py-2 rounded-xl bg-white/10 hover:bg-red-600/20 text-red-500 border border-white/10 transition"
+            >
+              Delete
+            </button>
+          </div>
+        </div>
+
+        {/* Status Message */}
+        {status === 0 && (
+          <div className="mb-6 p-4 rounded-2xl bg-red-500/10 border border-red-500/20 text-red-400 flex items-center gap-3">
+             <AlertCircle size={20} />
+             <span>QR Scanning is currently <b>DISABLED</b> for this event.</span>
+          </div>
+        )}
 
       {/* Event Dates */}
       <p className="text-gray-300 mb-6">
@@ -475,6 +517,7 @@ export default function EventDetails() {
           )}
         </div>
       )}
+      </main>
     </div>
   );
 }

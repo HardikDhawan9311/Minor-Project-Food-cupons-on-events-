@@ -486,37 +486,54 @@ exports.saveAllMeals = async (req, res) => {
   const { id } = req.params;
   const { date, meals } = req.body;
 
-  if (!date || !meals || meals.length === 0) {
-    return res
-      .status(400)
-      .json({ message: "Date and meals are required" });
+  if (!date) {
+    return res.status(400).json({ message: "Date is required" });
+  }
+
+  const mealList = meals || [];
+
+  if (mealList.length > 5) {
+    return res.status(400).json({ message: "Maximum 5 meals per day allowed" });
   }
 
   try {
-    // ✅ Delete existing meals for that date
-    await db.execute(
-      `DELETE FROM event_meals WHERE event_id = ? AND date = ?`,
+    // 1. Get existing meals for this date from the DB
+    const [existing] = await db.execute(
+      "SELECT meal_id FROM event_meals WHERE event_id = ? AND date = ?",
       [id, date]
     );
-
-    for (const meal of meals) {
-      if (!meal.meal_name || !meal.start_time || !meal.end_time) continue;
-
+    const existingIds = existing.map(m => m.meal_id);
+    const incomingIds = mealList.filter(m => m.meal_id).map(m => m.meal_id);
+    
+    // 2. Identify meals to DELETE (in DB but not in request)
+    const toDelete = existingIds.filter(eid => !incomingIds.includes(eid));
+    if (toDelete.length > 0) {
       await db.execute(
-        `INSERT INTO event_meals
-         (event_id, date, meal_name, start_time, end_time)
-         VALUES (?, ?, ?, ?, ?)`,
-        [
-          id,
-          date, // ✅ DATE column → store only date
-          meal.meal_name.trim().toLowerCase(),
-          meal.start_time,
-          meal.end_time,
-        ]
+        `DELETE FROM event_meals WHERE meal_id IN (${toDelete.join(',')})`
       );
     }
 
-    res.status(200).json({ message: "Meals saved successfully" });
+    // 3. Process each meal (Update or Insert)
+    for (const meal of mealList) {
+      const name = meal.meal_name.trim().toLowerCase();
+      if (!name || !meal.start_time || !meal.end_time) continue;
+
+      if (meal.meal_id && existingIds.includes(meal.meal_id)) {
+        // UPDATE existing
+        await db.execute(
+          `UPDATE event_meals SET meal_name = ?, start_time = ?, end_time = ? WHERE meal_id = ?`,
+          [name, meal.start_time, meal.end_time, meal.meal_id]
+        );
+      } else {
+        // INSERT new
+        await db.execute(
+          `INSERT INTO event_meals (event_id, date, meal_name, start_time, end_time) VALUES (?, ?, ?, ?, ?)`,
+          [id, date, name, meal.start_time, meal.end_time]
+        );
+      }
+    }
+
+    res.status(200).json({ message: "Meals synced successfully" });
 
   } catch (error) {
     console.error(error);
