@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
-import Navbar from "../components/NavBar";
-import Footer from "../components/Footer";
+import Navbar from "../Components/NavBar";
+import Footer from "../Components/Footer";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   Calendar, 
@@ -16,6 +16,7 @@ import {
   CheckCircle2,
   Trash2
 } from "lucide-react";
+import { toast } from "react-hot-toast";
 
 const normalizeDate = (d) => (typeof d === "string" ? d.slice(0, 10) : "");
 
@@ -73,7 +74,7 @@ export default function EditEvent() {
   const addMealRow = () => {
     const savedMealsCount = mealDays.find(d => normalizeDate(d.date) === selectedDate)?.meals.length || 0;
     if (tempMeals.length + savedMealsCount >= 5) {
-      alert("Maximum 5 meals per day allowed.");
+      toast.error("Maximum 5 meals per day allowed.");
       return;
     }
     setTempMeals([...tempMeals, { meal_name: "", start_time: "", end_time: "" }]);
@@ -91,7 +92,7 @@ export default function EditEvent() {
     const combinedMeals = [...existingMeals, ...tempMeals];
 
     if (combinedMeals.length > 5) {
-      alert("Maximum 5 meals per day allowed.");
+      toast.error("Maximum 5 meals per day allowed.");
       return;
     }
 
@@ -106,9 +107,11 @@ export default function EditEvent() {
 
       if (!res.ok) {
         const d = await res.json();
-        alert(`Failed to save meals: ${d.message || "Unknown error"}`);
+        toast.error(`Failed to save meals: ${d.message || "Unknown error"}`);
         return;
       }
+
+      toast.success("Schedule synced successfully! 🍕");
 
       setTempMeals([]);
       // Refresh meal list
@@ -137,17 +140,18 @@ export default function EditEvent() {
         });
 
         if (deleteRes.ok) {
+          toast.success("Meal deleted successfully.");
           // Refresh meal list
           const refreshRes = await fetch(`http://localhost:5000/events/${id}`);
           const d = await refreshRes.json();
           setMealDays(d.meals || []);
         } else {
           const errorData = await res.json();
-          alert(`Failed to delete meal: ${errorData.message || 'Unknown error'}`);
+          toast.error(`Failed to delete meal: ${errorData.message || 'Unknown error'}`);
         }
       } catch (error) {
         console.error("Error deleting meal:", error);
-        alert("An error occurred while deleting the meal.");
+        toast.error("An error occurred while deleting the meal.");
       }
     }
   };

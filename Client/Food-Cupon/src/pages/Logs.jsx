@@ -1,28 +1,51 @@
 import React, { useEffect, useState } from "react";
-import { Search } from "lucide-react";
-import Navbar from "../components/NavBar";
-import Footer from "../components/Footer";
+import { Search, ArrowLeft } from "lucide-react";
+import { useParams, useNavigate } from "react-router-dom";
+import Navbar from "../Components/NavBar";
+import Footer from "../Components/Footer";
 
 export default function Logs() {
+  const { id } = useParams();
+  const navigate = useNavigate();
   const [participants, setParticipants] = useState([]);
   const [groupedTeams, setGroupedTeams] = useState({});
   const [events, setEvents] = useState([]);
-  const [selectedEvent, setSelectedEvent] = useState("");
+  const [selectedEvent, setSelectedEvent] = useState(id || "");
+  const [eventName, setEventName] = useState("");
   const [search, setSearch] = useState("");
 
   useEffect(() => {
-    fetchEvents();
-  }, []);
+    if (id) {
+      fetchEventDetails();
+    } else {
+      fetchEvents();
+    }
+  }, [id]);
 
   useEffect(() => {
     if (selectedEvent) fetchLogs();
   }, [selectedEvent]);
 
+  const fetchEventDetails = async () => {
+    try {
+      const res = await fetch(`http://localhost:5000/events/${id}`);
+      const data = await res.json();
+      setEventName(data.event.event_name);
+      setSelectedEvent(id);
+    } catch (err) {
+      console.error("Failed to fetch event details:", err);
+    }
+  };
+
   const fetchEvents = async () => {
-    const res = await fetch("http://localhost:5000/events");
-    const data = await res.json();
-    setEvents(data || []);
-    if (data?.length) setSelectedEvent(data[0].event_id);
+    try {
+      const res = await fetch("http://localhost:5000/events");
+      const data = await res.json();
+      setEvents(data || []);
+      if (data?.length && !selectedEvent) setSelectedEvent(data[0].event_id);
+    } catch (err) {
+      console.error("Failed to fetch events:", err);
+    }
   };
 
   const fetchLogs = async () => {
@@ -75,22 +98,36 @@ export default function Logs() {
           <h1 className="text-4xl font-bold">📊 Logs Dashboard</h1>
 
           <div className="flex gap-4 flex-wrap">
-            {/* Event Selector */}
-            <select
-              value={selectedEvent}
-              onChange={(e) => setSelectedEvent(e.target.value)}
-              className="bg-white/10 border border-white/20 rounded-xl px-4 py-2 outline-none"
-            >
-              {events.map((e) => (
-                <option
-                  key={e.event_id}
-                  value={e.event_id}
-                  className="text-black"
+            {/* Event Selector / Info */}
+            {id ? (
+              <div className="flex items-center gap-4">
+                <button
+                  onClick={() => navigate("/")}
+                  className="p-2 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition text-gray-400 hover:text-white"
                 >
-                  {e.event_name}
-                </option>
-              ))}
-            </select>
+                  <ArrowLeft size={20} />
+                </button>
+                <div className="bg-white/10 border border-[#C77DFF]/30 px-4 py-2 rounded-xl text-[#C77DFF] font-bold">
+                  {eventName || "Loading..."}
+                </div>
+              </div>
+            ) : (
+              <select
+                value={selectedEvent}
+                onChange={(e) => setSelectedEvent(e.target.value)}
+                className="bg-white/10 border border-white/20 rounded-xl px-4 py-2 outline-none"
+              >
+                {events.map((e) => (
+                  <option
+                    key={e.event_id}
+                    value={e.event_id}
+                    className="text-black"
+                  >
+                    {e.event_name}
+                  </option>
+                ))}
+              </select>
+            )}
 
             {/* Search */}
             <div className="relative">
@@ -133,12 +170,13 @@ export default function Logs() {
                   {members.map((m) => (
                     <div
                       key={m.id}
+                      onClick={() => navigate(`/participant/${m.id}`)}
                       className={`w-11 h-11 rounded-lg ${getBoxColor(
                         m.check_in,
                         m.meals_eaten
-                      )} relative group hover:scale-110 transition`}
+                      )} relative group hover:scale-110 transition cursor-pointer`}
                     >
-                      <div className="absolute -top-9 left-1/2 -translate-x-1/2 bg-black/80 px-3 py-1 rounded text-xs opacity-0 group-hover:opacity-100">
+                      <div className="absolute -top-9 left-1/2 -translate-x-1/2 bg-black/80 px-3 py-1 rounded text-xs opacity-0 group-hover:opacity-100 whitespace-nowrap z-10">
                         {m.name}
                       </div>
                     </div>

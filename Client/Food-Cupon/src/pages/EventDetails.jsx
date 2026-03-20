@@ -300,7 +300,8 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { AlertCircle } from "lucide-react";
-import Navbar from "../components/NavBar";
+import Navbar from "../Components/NavBar";
+import { toast } from "react-hot-toast";
 
 export default function EventDetails() {
   const { id } = useParams();
@@ -310,7 +311,6 @@ export default function EventDetails() {
   const [selectedDate, setSelectedDate] = useState("");
 
   const [loading, setLoading] = useState(true);
-  const [emailStatus, setEmailStatus] = useState(""); // sending | success | error
 
   // ✅ Fetch event + meals
   useEffect(() => {
@@ -342,9 +342,8 @@ export default function EventDetails() {
 
   // ✅ Generate QR → Then Send Email
   const sendEmail = async () => {
+    const toastId = toast.loading("Generating QR Codes & Sending Emails...");
     try {
-      setEmailStatus("sending");
-
       /* 1️⃣ Generate QR Code */
       const qrRes = await fetch(
         "http://localhost:5000/generation/auto_generated_qr_code",
@@ -355,12 +354,7 @@ export default function EventDetails() {
         }
       );
 
-      if (!qrRes.ok) {
-        throw new Error("QR generation failed");
-      }
-
-      const qrData = await qrRes.json();
-      console.log("✅ QR Generated:", qrData);
+      if (!qrRes.ok) throw new Error("QR generation failed");
 
       /* 2️⃣ Send Email */
       const emailRes = await fetch(
@@ -372,14 +366,12 @@ export default function EventDetails() {
         }
       );
 
-      if (!emailRes.ok) {
-        throw new Error("Email sending failed");
-      }
+      if (!emailRes.ok) throw new Error("Email sending failed");
 
-      setEmailStatus("success");
+      toast.success("All QR Emails sent successfully! 🚀", { id: toastId });
     } catch (error) {
       console.error("❌ Error:", error);
-      setEmailStatus("error");
+      toast.error(error.message || "Failed to process request", { id: toastId });
     }
   };
 
@@ -400,8 +392,15 @@ export default function EventDetails() {
 
   const deleteEvent = async () => {
     if (window.confirm("Are you sure you want to delete this event? This will also delete all participants and meals.")) {
-      await fetch(`http://localhost:5000/events/${id}`, { method: "DELETE" });
-      navigate("/home");
+      const toastId = toast.loading("Deleting event...");
+      try {
+        const res = await fetch(`http://localhost:5000/events/${id}`, { method: "DELETE" });
+        if (!res.ok) throw new Error("Failed to delete event");
+        toast.success("Event deleted successfully", { id: toastId });
+        navigate("/home");
+      } catch (err) {
+        toast.error(err.message, { id: toastId });
+      }
     }
   };
 
@@ -440,10 +439,9 @@ export default function EventDetails() {
 
             <button
               onClick={sendEmail}
-              disabled={emailStatus === "sending"}
-              className="px-6 py-2 rounded-xl font-bold bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 transition shadow-lg"
+              className="px-6 py-2 rounded-xl font-bold bg-indigo-600 hover:bg-indigo-700 transition shadow-lg"
             >
-              {emailStatus === "sending" ? "Sending..." : "Send QR Emails"}
+              Send QR Emails
             </button>
 
             <button

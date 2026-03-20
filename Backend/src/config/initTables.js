@@ -15,6 +15,7 @@ const initTables = async () => {
       username VARCHAR(50) UNIQUE NOT NULL,
       email VARCHAR(100) NOT NULL,
       password VARCHAR(255) NOT NULL,
+      role VARCHAR(20) DEFAULT 'user',
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )`,
     `CREATE TABLE IF NOT EXISTS events (
@@ -80,6 +81,18 @@ const initTables = async () => {
       console.log("✅ Database Migrations Verified!");
     } catch (err) {
       console.error("❌ Migration error:", err.message);
+    }
+
+    // Migration: add 'role' to users if missing
+    try {
+      const [columns] = await db.execute("DESCRIBE users");
+      const columnNames = columns.map(c => c.Field);
+      if (!columnNames.includes("role")) {
+        await db.execute("ALTER TABLE users ADD COLUMN role VARCHAR(20) DEFAULT 'user' AFTER password");
+        console.log("✅ Added 'role' column to users table");
+      }
+    } catch (err) {
+      console.error("❌ User role migration error:", err.message);
     }
 
   } catch (error) {

@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import Navbar from "../components/NavBar";
-import Footer from "../components/Footer";
+import Navbar from "../Components/NavBar";
+import Footer from "../Components/Footer";
 import { motion, AnimatePresence } from "framer-motion";
-import { Gift, CalendarDays, X, Calendar, Clock, ArrowRight, Trash2, Edit3, Plus, Type } from "lucide-react";
+import { Gift, CalendarDays, X, Calendar, Clock, ArrowRight, Trash2, Edit3, Plus, Type, Upload, FileText } from "lucide-react";
+import { toast } from "react-hot-toast";
 
 export default function Home() {
   const [showEventForm, setShowEventForm] = useState(false);
@@ -31,6 +32,22 @@ export default function Home() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const start = new Date(eventData.start_date);
+    const end = new Date(eventData.end_date);
+
+    if (start < today) {
+      toast.error("Start date cannot be in the past");
+      return;
+    }
+
+
+    if (end < start) {
+      toast.error("End date cannot be before start date");
+      return;
+    }
     
     try {
       const res = await fetch("http://localhost:5000/events/create", {
@@ -42,15 +59,17 @@ export default function Home() {
       const data = await res.json();
       
       if (!res.ok) {
-        setError(data.message || "Failed to create event");
+        toast.error(data.message || "Failed to create event");
         return;
       }
+
+      toast.success("Event created successfully! 🎊");
 
       setShowEventForm(false);
       setEventData({ event_name: "", start_date: "", end_date: "" });
       fetchEvents();
     } catch (err) {
-      setError("Server connection failed. Please try again.");
+      toast.error("Server connection failed. Please try again.");
       console.error("Create event error:", err);
     }
   };
@@ -200,6 +219,7 @@ export default function Home() {
                           <input
                             type="date"
                             name="start_date"
+                            min={new Date().toISOString().split("T")[0]}
                             value={eventData.start_date}
                             onChange={handleChange}
                             className="w-full pl-12 pr-4 py-4 rounded-2xl bg-white/5 border border-white/10 text-white focus:ring-2 focus:ring-[#7F5AF0] outline-none transition-all [color-scheme:dark]"
@@ -217,6 +237,7 @@ export default function Home() {
                           <input
                             type="date"
                             name="end_date"
+                            min={eventData.start_date || new Date().toISOString().split("T")[0]}
                             value={eventData.end_date}
                             onChange={handleChange}
                             className="w-full pl-12 pr-4 py-4 rounded-2xl bg-white/5 border border-white/10 text-white focus:ring-2 focus:ring-[#7F5AF0] outline-none transition-all [color-scheme:dark]"
@@ -271,7 +292,12 @@ export default function Home() {
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 w-full">
-              {events.map((e) => {
+              {events
+                .filter(e => {
+                  const status = getEventStatus(e.start_date, e.end_date);
+                  return status.label === "Live Now" || status.label === "Upcoming";
+                })
+                .map((e) => {
                 const status = getEventStatus(e.start_date, e.end_date);
                 return (
                   <div
@@ -286,19 +312,42 @@ export default function Home() {
                         <span className={`px-3 py-1 rounded-full text-xs font-bold border ${status.color}`}>
                           {status.label}
                         </span>
-                        <button
-                          onClick={async (event) => {
-                            event.stopPropagation();
-                            if (window.confirm("Are you sure you want to delete this event? This will also delete all participants and meals.")) {
-                              await fetch(`http://localhost:5000/events/${e.event_id}`, { method: "DELETE" });
-                              fetchEvents();
-                            }
-                          }}
-                          className="p-2.5 bg-red-500/10 hover:bg-red-500/20 text-red-500 rounded-xl transition-all duration-300 opacity-60 group-hover:opacity-100"
-                          title="Delete Event"
-                        >
-                          <Trash2 size={18} />
-                        </button>
+                        <div className="flex items-center gap-2">
+                          <Link
+                            to={`/import/${e.event_id}`}
+                            className="p-2.5 bg-[#7F5AF0]/10 hover:bg-[#7F5AF0]/20 text-[#7F5AF0] rounded-xl transition-all duration-300 opacity-60 group-hover:opacity-100"
+                            title="Import Participants"
+                          >
+                            <Upload size={18} />
+                          </Link>
+                          <Link
+                            to={`/logs/${e.event_id}`}
+                            className="p-2.5 bg-[#C77DFF]/10 hover:bg-[#C77DFF]/20 text-[#C77DFF] rounded-xl transition-all duration-300 opacity-60 group-hover:opacity-100"
+                            title="View Logs"
+                          >
+                            <FileText size={18} />
+                          </Link>
+                          <button
+                            onClick={async (event) => {
+                              event.stopPropagation();
+                              if (window.confirm("Are you sure you want to delete this event? This will also delete all participants and meals.")) {
+                                const toastId = toast.loading("Deleting event...");
+                                try {
+                                  const res = await fetch(`http://localhost:5000/events/${e.event_id}`, { method: "DELETE" });
+                                  if (!res.ok) throw new Error("Failed to delete event");
+                                  toast.success("Event deleted successfully", { id: toastId });
+                                  fetchEvents();
+                                } catch (err) {
+                                  toast.error(err.message, { id: toastId });
+                                }
+                              }
+                            }}
+                            className="p-2.5 bg-red-500/10 hover:bg-red-500/20 text-red-500 rounded-xl transition-all duration-300 opacity-60 group-hover:opacity-100"
+                            title="Delete Event"
+                          >
+                            <Trash2 size={18} />
+                          </button>
+                        </div>
                       </div>
 
                       <h3 className="text-2xl font-bold text-white mb-4 line-clamp-1 group-hover:text-[#C77DFF] transition-colors">

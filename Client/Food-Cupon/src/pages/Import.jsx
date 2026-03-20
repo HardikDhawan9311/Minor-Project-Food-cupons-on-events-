@@ -1,23 +1,42 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import axios from "axios";
-import { UploadCloud, FileSpreadsheet } from "lucide-react";
-import Navbar from "../components/NavBar";
+import { UploadCloud, FileSpreadsheet, ArrowLeft } from "lucide-react";
+import { useParams, useNavigate } from "react-router-dom";
+import Navbar from "../Components/NavBar";
+import { toast } from "react-hot-toast";
 
 export default function ImportPage() {
+  const { id } = useParams();
+  const navigate = useNavigate();
   const [file, setFile] = useState(null);
-  const [message, setMessage] = useState("");
   const [events, setEvents] = useState([]);
-  const [selectedEvent, setSelectedEvent] = useState("");
+  const [selectedEvent, setSelectedEvent] = useState(id || "");
+  const [eventName, setEventName] = useState("");
+  const fileInputRef = useRef(null);
 
   useEffect(() => {
-    fetchEvents();
-  }, []);
+    if (id) {
+      fetchEventDetails();
+    } else {
+      fetchEvents();
+    }
+  }, [id]);
+
+  const fetchEventDetails = async () => {
+    try {
+      const res = await axios.get(`http://localhost:5000/events/${id}`);
+      setEventName(res.data.event.event_name);
+      setSelectedEvent(id);
+    } catch (err) {
+      console.error("Failed to fetch event details:", err);
+    }
+  };
 
   const fetchEvents = async () => {
     try {
       const res = await axios.get("http://localhost:5000/events");
       setEvents(res.data || []);
-      if (res.data?.length) setSelectedEvent(res.data[0].event_id);
+      if (res.data?.length && !selectedEvent) setSelectedEvent(res.data[0].event_id);
     } catch (err) {
       console.error("Failed to fetch events:", err);
     }
@@ -29,12 +48,12 @@ export default function ImportPage() {
 
   const handleUpload = async () => {
     if (!file) {
-      setMessage("⚠️ Please select an Excel file first");
+      toast.error("Please select an Excel file first");
       return;
     }
 
     if (!selectedEvent) {
-      setMessage("⚠️ Please select an event first");
+      toast.error("Please select an event first");
       return;
     }
 
@@ -43,24 +62,35 @@ export default function ImportPage() {
     formData.append("file", file);
 
     try {
+      const toastId = toast.loading("Uploading participants...");
       const response = await axios.post(
         "http://localhost:5000/participants/upload-excel",
         formData,
         { headers: { "Content-Type": "multipart/form-data" } }
       );
 
-      const { inserted = 0, errors = 0 } = response.data;
-      if (inserted === 0 && errors > 0) {
-        setMessage(`❌ 0 added. ${errors} failed. Please check the file and try again.`);
-      } else if (errors > 0) {
-        setMessage(`⚠️ ${inserted} added. ${errors} failed.`);
+      const { inserted = 0, errors = 0, duplicates = 0, message } = response.data;
+      
+      if (inserted === 0) {
+        if (duplicates > 0 && errors === 0) {
+          toast.error("Duplicate participants found. No new entries added.", { id: toastId });
+        } else {
+          toast.error(message || "Failed to add participants.", { id: toastId });
+        }
       } else {
-        setMessage(`✅ ${inserted} participants added successfully!`);
+        let successMsg = `${inserted} participants added successfully!`;
+        if (duplicates > 0 || errors > 0) {
+          successMsg = `${inserted} added. ${duplicates} duplicates skipped. ${errors} errors.`;
+        }
+        toast.success(successMsg, { id: toastId });
       }
       setFile(null);
+      if (fileInputRef.current) fileInputRef.current.value = "";
     } catch (err) {
       console.error(err);
-      setMessage("❌ Upload failed. Please check the file and try again");
+      toast.error("Upload failed. Please check the file and try again", { id: toastId });
+      setFile(null);
+      if (fileInputRef.current) fileInputRef.current.value = "";
     }
   };
 
@@ -82,26 +112,32 @@ export default function ImportPage() {
             </p>
           </div>
 
-          {/* Event Selector */}
+          {/* Event Selector / Display */}
           <div className="mb-6">
             <label className="block text-sm font-medium text-gray-300 mb-2">
-              Select Event
+              Event Context
             </label>
-            <select
-              value={selectedEvent}
-              onChange={(e) => setSelectedEvent(e.target.value)}
-              className="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-3 outline-none focus:border-[#C77DFF] transition"
-            >
-              {events.length === 0 ? (
-                <option value="" className="text-black">No events available</option>
-              ) : (
-                events.map((e) => (
-                  <option key={e.event_id} value={e.event_id} className="text-black">
-                    {e.event_name}
-                  </option>
-                ))
-              )}
-            </select>
+            {id ? (
+              <div className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-[#C77DFF] font-bold">
+                {eventName || "Loading event details..."}
+              </div>
+            ) : (
+              <select
+                value={selectedEvent}
+                onChange={(e) => setSelectedEvent(e.target.value)}
+                className="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-3 outline-none focus:border-[#C77DFF] transition"
+              >
+                {events.length === 0 ? (
+                  <option value="" className="text-black">No events available</option>
+                ) : (
+                  events.map((e) => (
+                    <option key={e.event_id} value={e.event_id} className="text-black">
+                      {e.event_name}
+                    </option>
+                  ))
+                )}
+              </select>
+            )}
           </div>
 
           {/* Upload Box */}
@@ -113,6 +149,7 @@ export default function ImportPage() {
             <input
               type="file"
               accept=".xlsx,.xls"
+              ref={fileInputRef}
               onChange={handleFileChange}
               className="hidden"
             />
@@ -125,30 +162,25 @@ export default function ImportPage() {
             </p>
           )}
 
-          {/* Upload Button */}
-          <button
-            onClick={handleUpload}
-            className="mt-6 w-full py-3 rounded-xl bg-gradient-to-r from-[#7F5AF0] to-[#C77DFF] font-semibold hover:scale-[1.02] transition"
-          >
-            Upload File
-          </button>
-
-          {/* Message */}
-          {message && (
-            <p
-              className={`mt-4 text-sm text-center font-medium ${
-                message.includes("✅")
-                  ? "text-green-400"
-                  : message.includes("⚠️")
-                  ? "text-yellow-400"
-                  : "text-red-400"
-              }`}
+          <div className="flex gap-3 mt-6">
+            {id && (
+              <button
+                onClick={() => navigate("/")}
+                className="flex-1 py-3 rounded-xl bg-white/10 border border-white/10 font-semibold hover:bg-white/20 transition flex items-center justify-center gap-2"
+              >
+                <ArrowLeft size={18} /> Back
+              </button>
+            )}
+            <button
+              onClick={handleUpload}
+              className={`${id ? 'flex-[2]' : 'w-full'} py-3 rounded-xl bg-gradient-to-r from-[#7F5AF0] to-[#C77DFF] font-semibold hover:scale-[1.02] transition`}
             >
-              {message}
-            </p>
-          )}
+              Upload File
+            </button>
+          </div>
+
+          </div>
         </div>
       </div>
-    </div>
   );
 }

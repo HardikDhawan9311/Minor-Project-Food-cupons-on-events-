@@ -144,7 +144,7 @@ require("dotenv").config();
 // Utility function to create JWT token
 const createToken = (user) => {
   return jwt.sign(
-    { id: user.id, username: user.username, email: user.email },
+    { id: user.id, username: user.username, email: user.email, role: user.role },
     process.env.JWT_SECRET,
     { expiresIn: "1d" } // token valid for 1 day
   );
@@ -180,12 +180,13 @@ const signup = async (req, res) => {
 
     // 4️⃣ Insert user
     const [result] = await db.execute(
-      "INSERT INTO users (name, username, email, password) VALUES (?, ?, ?, ?)",
-      [name, username, email, hashedPassword]
+      "INSERT INTO users (name, username, email, password, role) VALUES (?, ?, ?, ?, ?)",
+      [name, username, email, hashedPassword, "user"]
     );
 
     // 5️⃣ Generate token
-    const newUser = { id: result.insertId, name, username, email };
+    const newUser = { id: result.insertId, name, username, email, role: "user" };
+
     const token = createToken(newUser);
 
     res.status(201).json({
@@ -222,7 +223,13 @@ const signin = async (req, res) => {
       return res.status(401).json({ message: "Invalid credentials" });
     }
 
+    // 🚩 NEW: Only admins are allowed to login
+    if (user.role !== "admin") {
+      return res.status(403).json({ message: "Access denied. Only administrators can access this website." });
+    }
+
     // 3️⃣ Generate JWT
+
     const token = createToken(user);
 
     res.status(200).json({
@@ -232,6 +239,7 @@ const signin = async (req, res) => {
         name: user.name,
         username: user.username,
         email: user.email,
+        role: user.role,
       },
       token,
     });

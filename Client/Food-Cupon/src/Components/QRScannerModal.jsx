@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import QrScanner from "react-qr-scanner";
 import { X, Check, QrCode } from "lucide-react";
 import api from "../utils/api";
+import { toast } from "react-hot-toast";
 
 const QRScannerModal = ({ onClose, eventId, activeMeal, onChangeMeal }) => {
   const [history, setHistory] = useState([]);
@@ -33,6 +34,7 @@ const QRScannerModal = ({ onClose, eventId, activeMeal, onChangeMeal }) => {
         };
         
         setHistory(prev => [newEntry, ...prev].slice(0, 5));
+        toast.success(`Success: ${res.data.name || "Member"}`);
         
         // Wait 1.5s before next scan
         setTimeout(() => setScanning(false), 1500);
@@ -47,6 +49,7 @@ const QRScannerModal = ({ onClose, eventId, activeMeal, onChangeMeal }) => {
           success: false
         };
         setHistory(prev => [newEntry, ...prev].slice(0, 5));
+        toast.error(errorMsg);
         setTimeout(() => setScanning(false), 2000);
       }
 

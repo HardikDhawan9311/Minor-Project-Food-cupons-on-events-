@@ -146,6 +146,7 @@ import { useState } from "react";
 import { FaUser, FaLock } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
 import { saveToken } from "../utils/auth";
+import { toast } from "react-hot-toast";
 
 const SignIn = () => {
   const [formData, setFormData] = useState({ username: "", password: "" });
@@ -168,9 +169,10 @@ const SignIn = () => {
       if (!res.ok) throw new Error(data.message);
 
       saveToken(data.token);
+      toast.success("Login successful! 🎉");
       navigate("/home");
     } catch (err) {
-      alert(err.message);
+      toast.error(err.message);
     }
   };
 

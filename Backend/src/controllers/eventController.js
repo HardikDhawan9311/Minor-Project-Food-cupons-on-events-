@@ -371,6 +371,19 @@ exports.createEvent = async (req, res) => {
     return res.status(400).json({ message: "All fields are required" });
   }
 
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const start = new Date(start_date);
+  const end = new Date(end_date);
+
+  if (start < today) {
+    return res.status(400).json({ message: "Start date cannot be in the past" });
+  }
+
+  if (end < start) {
+    return res.status(400).json({ message: "End date cannot be before start date" });
+  }
+
   try {
     const [existing] = await db.execute(
       "SELECT event_id FROM events WHERE LOWER(event_name) = LOWER(?)",

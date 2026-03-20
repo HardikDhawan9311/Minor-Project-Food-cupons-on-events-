@@ -42,4 +42,14 @@ router.get("/team/:teamName", asyncHandler(getTeamParticipants));
 // ✅ New route for QR scan marking meal as eaten
 router.post("/scan", asyncHandler(markMealEaten));
 
+// ✅ New route for single participant details
+router.get("/:id", asyncHandler(require("../controllers/participantController").getParticipantById));
+
+// ✅ New route for team members in an event
+router.get("/event/:event_id/team/:team_name", asyncHandler(require("../controllers/participantController").getTeamMembersByEvent));
+
+// ✅ New routes for meal schedule and manual toggle
+router.get("/:id/meals", asyncHandler(require("../controllers/participantController").getParticipantMealStatus));
+router.post("/:id/toggle-meal/:meal_id", asyncHandler(require("../controllers/participantController").toggleMealScan));
+
 module.exports = router;

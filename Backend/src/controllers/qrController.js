@@ -1,11 +1,16 @@
 const db = require("../config/db");
 const axios = require("axios");
 
-// Generate QR codes for all token IDs in MySQL
+// Generate QR codes for all token IDs of a specific event
 const autoGenerateQrCodes = async (req, res) => {
   try {
-    // 1️⃣ Fetch token IDs
-    const [rows] = await db.execute("SELECT token_id FROM participants");
+    const { event_id } = req.body;
+    if (!event_id) {
+      return res.status(400).json({ message: "event_id is required" });
+    }
+
+    // 1️⃣ Fetch token IDs for this event
+    const [rows] = await db.execute("SELECT token_id FROM participants WHERE event_id = ?", [event_id]);
     const token_ids = rows.map((r) => r.token_id);
 
     if (!token_ids.length) {

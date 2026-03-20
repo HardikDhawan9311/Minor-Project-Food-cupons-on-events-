@@ -6,26 +6,42 @@ import Home from "./pages/Home";
 import Setting from "./pages/Settings";
 import ImportPage from "./pages/Import";
 import LogsPage from "./pages/Logs";
-import ProtectedRoute from "./components/ProtectedRoute";
+import ProtectedRoute from "./Components/ProtectedRoute";
 import Schedule from "./pages/Schedule";
 import EventDetails from "./pages/EventDetails";
 import EditEvent from "./pages/EditEvent";
-import { getToken } from "./utils/auth";
+import Events from "./pages/Events";
+import ParticipantDetails from "./pages/ParticipantDetails";
+import { getToken, decodeToken } from "./utils/auth";
+import { Toaster } from "react-hot-toast";
 
 function App() {
   const token = getToken();
 
   return (
     <Router>
+      <Toaster position="top-right" reverseOrder={false} />
       <Routes>
-        {/* Redirect if already logged in */}
+        {/* Redirect if already logged in AND is admin */}
         <Route
           path="/"
-          element={token ? <Navigate to="/home" replace /> : <Signup />}
+          element={
+            getToken() && decodeToken()?.role === "admin" ? (
+              <Navigate to="/home" replace />
+            ) : (
+              <Signup />
+            )
+          }
         />
         <Route
           path="/signin"
-          element={token ? <Navigate to="/home" replace /> : <SignIn />}
+          element={
+            getToken() && decodeToken()?.role === "admin" ? (
+              <Navigate to="/home" replace />
+            ) : (
+              <SignIn />
+            )
+          }
         />
 
         {/* Protected Routes */}
@@ -34,6 +50,14 @@ function App() {
           element={
             <ProtectedRoute>
               <Home />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/events"
+          element={
+            <ProtectedRoute>
+              <Events />
             </ProtectedRoute>
           }
         />
@@ -48,7 +72,7 @@ function App() {
         />
 
         <Route
-          path="/import"
+          path="/import/:id"
           element={
             <ProtectedRoute>
               <ImportPage />
@@ -57,7 +81,7 @@ function App() {
         />
 
         <Route
-          path="/logs"
+          path="/logs/:id"
           element={
             <ProtectedRoute>
               <LogsPage />
@@ -89,6 +113,15 @@ function App() {
           element={
             <ProtectedRoute>
               <EditEvent />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/participant/:id"
+          element={
+            <ProtectedRoute>
+              <ParticipantDetails />
             </ProtectedRoute>
           }
         />

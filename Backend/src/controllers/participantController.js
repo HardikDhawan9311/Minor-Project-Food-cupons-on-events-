@@ -95,6 +95,7 @@ const uploadExcel = async (req, res) => {
     });
 
     let insertCount = 0;
+    let duplicateCount = 0;
     let errorCount = 0;
 
     // 🔹 Insert rows one by one
@@ -108,13 +109,29 @@ const uploadExcel = async (req, res) => {
       }
 
       try {
-        const token_id = await getUniqueToken(teamname, name, email);
+        const eid = parseInt(event_id);
+        const nameVal = name ? name.toString().trim() : "";
+        const teamVal = teamname ? teamname.toString().trim() : "";
+
+        // 🔹 More robust duplicate check
+        const [existing] = await db.execute(
+          "SELECT id FROM participants WHERE event_id = ? AND LOWER(TRIM(name)) = LOWER(?) AND LOWER(TRIM(team_name)) = LOWER(?)",
+          [eid, nameVal, teamVal]
+        );
+
+        if (existing.length > 0) {
+          console.log(`⚠️ Duplicate found for ${nameVal} in team ${teamVal}. Skipping...`);
+          duplicateCount++;
+          continue;
+        }
+
+        const token_id = await getUniqueToken(teamVal, nameVal, email);
         const isCheckedIn = (checkin?.toString().toLowerCase().trim() === "yes") ? 1 : 0;
         
-        console.log(`📝 Inserting row ${index + 2}: ${name} (${email})`);
+        console.log(`📝 Inserting row ${index + 2}: ${nameVal} (${email})`);
         const [result] = await db.execute(
           "INSERT INTO participants (event_id, team_name, name, email, check_in, token_id) VALUES (?, ?, ?, ?, ?, ?)",
-          [event_id, teamname, name, email, isCheckedIn, token_id]
+          [eid, teamVal, nameVal, email, isCheckedIn, token_id]
         );
         console.log(`✅ Row ${index + 2} affectRows: ${result.affectedRows}`);
 
@@ -166,9 +183,19 @@ const uploadExcel = async (req, res) => {
     }
 
     // ✅ Final response
+    let message = "Excel processed successfully";
+    if (duplicateCount > 0 && insertCount === 0 && errorCount === 0) {
+      message = "Duplicate participants found";
+    } else if (errorCount > 0 && insertCount === 0) {
+      message = "Error uploading participants";
+    } else if (duplicateCount > 0 || errorCount > 0) {
+      message = `Processed: ${insertCount} added, ${duplicateCount} duplicates skipped, ${errorCount} errors.`;
+    }
+
     res.json({
-      message: "Excel processed successfully",
+      message,
       inserted: insertCount,
+      duplicates: duplicateCount,
       errors: errorCount,
     });
 
@@ -243,36 +270,6 @@ const markMealEaten = async (req, res) => {
     }
 
     const participant = anyParticipant[0];
-
-    // 🚩 NEW: Handle Event Check-In session separately
-    if (meal_id === "check_in") {
-      if (participant.check_in === 1 || participant.check_in === "Yes" || participant.check_in === true) {
-        return res.status(400).json({ 
-          error: `⚠️ ${participant.name} is already checked in.`,
-          already_checked_in: true 
-        });
-      }
-
-      await db.execute(
-        "UPDATE participants SET check_in = 1 WHERE id = ?",
-        [participant.id]
-      );
-
-      return res.json({
-        message: `✅ Check-In successful for ${participant.name}!`,
-        name: participant.name,
-        team_name: participant.team_name,
-        check_in: true,
-        summary: "Checked in successfully"
-      });
-    }
-
-    // 🚩 NEW: Block meal scans if participant has not checked in (registration requirement)
-    if (!participant.check_in || participant.check_in === "No" || participant.check_in === 0) {
-      return res.status(403).json({
-        error: `❌ ${participant.name} is NOT checked in. Please check in at the registration desk first.`,
-      });
-    }
 
     // 🚩 NEW: Verify participant belongs to this specific event
     if (participant.event_id !== parseInt(event_id)) {
@@ -349,4 +346,118 @@ const markMealEaten = async (req, res) => {
   }
 };
 
-module.exports = { uploadExcel, getParticipants, getTeamParticipants, markMealEaten };
+// 🔹 Fetch single participant by ID
+const getParticipantById = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const [results] = await db.execute(
+      `SELECT p.*, e.event_name 
+       FROM participants p 
+       JOIN events e ON p.event_id = e.event_id 
+       WHERE p.id = ?`,
+      [id]
+    );
+
+    if (results.length === 0) {
+      return res.status(404).json({ error: "Participant not found" });
+    }
+
+    res.json(results[0]);
+  } catch (error) {
+    console.error("❌ getParticipantById error:", error);
+    res.status(500).json({ error: "Server error" });
+  }
+};
+
+// 🔹 Fetch all participants in a specific team for a specific event
+const getTeamMembersByEvent = async (req, res) => {
+  try {
+    const { event_id, team_name } = req.params;
+
+    const [results] = await db.execute(
+      "SELECT id, name, email, check_in, meals_eaten, token_id FROM participants WHERE event_id = ? AND LOWER(TRIM(team_name)) = LOWER(TRIM(?))",
+      [event_id, team_name]
+    );
+
+    res.json(results);
+  } catch (error) {
+    console.error("❌ getTeamMembersByEvent error:", error);
+    res.status(500).json({ error: "Server error" });
+  }
+};
+
+// 🔹 Fetch all meals for an event with scan status for a specific participant
+const getParticipantMealStatus = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // 1. Get participant's event_id
+    const [pResult] = await db.execute("SELECT event_id FROM participants WHERE id = ?", [id]);
+    if (pResult.length === 0) return res.status(404).json({ error: "Participant not found" });
+    const event_id = pResult[0].event_id;
+
+    // 2. Get all meals for this event
+    const [allMeals] = await db.execute(
+      "SELECT meal_id, meal_name, start_time, end_time, date FROM event_meals WHERE event_id = ? ORDER BY date, start_time",
+      [event_id]
+    );
+
+    // 3. Get meals already scanned for this participant
+    const [scannedMeals] = await db.execute(
+      "SELECT meal_id FROM meal_scans WHERE participant_id = ?",
+      [id]
+    );
+    const scannedIds = new Set(scannedMeals.map(m => m.meal_id));
+
+    // 4. Combine data
+    const schedule = allMeals.map(meal => ({
+      ...meal,
+      is_scanned: scannedIds.has(meal.meal_id)
+    }));
+
+    res.json(schedule);
+  } catch (error) {
+    console.error("❌ getParticipantMealStatus error:", error);
+    res.status(500).json({ error: "Server error" });
+  }
+};
+
+// 🔹 Manually toggle a meal scan (Grant/Revoke)
+const toggleMealScan = async (req, res) => {
+  try {
+    const { id, meal_id } = req.params;
+
+    // Check if the scan already exists
+    const [existing] = await db.execute(
+      "SELECT id FROM meal_scans WHERE participant_id = ? AND meal_id = ?",
+      [id, meal_id]
+    );
+
+    if (existing.length > 0) {
+      // DELETE scan and decrement counter
+      await db.execute("DELETE FROM meal_scans WHERE participant_id = ? AND meal_id = ?", [id, meal_id]);
+      await db.execute("UPDATE participants SET meals_eaten = GREATEST(0, meals_eaten - 1) WHERE id = ?", [id]);
+      res.json({ message: "Scan reset successfully", status: "not_scanned" });
+    } else {
+      // INSERT scan and increment counter
+      await db.execute("INSERT INTO meal_scans (participant_id, meal_id) VALUES (?, ?)", [id, meal_id]);
+      await db.execute("UPDATE participants SET meals_eaten = meals_eaten + 1 WHERE id = ?", [id]);
+      res.json({ message: "Meal marked as scanned", status: "scanned" });
+    }
+  } catch (error) {
+    console.error("❌ toggleMealScan error:", error);
+    res.status(500).json({ error: "Server error" });
+  }
+};
+
+module.exports = { 
+  uploadExcel, 
+  getParticipants, 
+  getTeamParticipants, 
+  markMealEaten, 
+  getParticipantById, 
+  getTeamMembersByEvent,
+  getParticipantMealStatus,
+  toggleMealScan
+};

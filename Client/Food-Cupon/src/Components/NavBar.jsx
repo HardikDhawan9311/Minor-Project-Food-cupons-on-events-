@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
-import { LogOut, Home, Calendar, Upload, FileText, Settings, Menu, X } from "lucide-react";
+import { LogOut, Home, Calendar, Upload, FileText, Settings, Menu, X, CalendarDays } from "lucide-react";
 import { removeToken } from "../utils/auth";
 
 const Navbar = () => {
@@ -15,9 +15,8 @@ const Navbar = () => {
 
   const navItems = [
     { name: "Home", path: "/home", icon: Home },
+    { name: "Events", path: "/events", icon: CalendarDays },
     { name: "Schedule", path: "/schedule", icon: Calendar },
-    { name: "Import", path: "/import", icon: Upload },
-    { name: "Logs", path: "/logs", icon: FileText },
     { name: "Settings", path: "/settings", icon: Settings },
   ];
 

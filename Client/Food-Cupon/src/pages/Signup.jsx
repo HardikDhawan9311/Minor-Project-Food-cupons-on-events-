@@ -170,6 +170,7 @@ import { useState } from "react";
 import { FaUser, FaLock, FaEnvelope } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
 import { saveToken } from "../utils/auth";
+import { toast } from "react-hot-toast";
 
 const SignUp = () => {
   const [formData, setFormData] = useState({
@@ -196,10 +197,10 @@ const SignUp = () => {
       const data = await res.json();
       if (!res.ok) throw new Error(data.message);
 
-      saveToken(data.token);
-      navigate("/home");
+      toast.success("Account created! Please ask an administrator to activate your account. 🚀", { duration: 6000 });
+      navigate("/signin");
     } catch (err) {
-      alert(err.message);
+      toast.error(err.message);
     }
   };
 

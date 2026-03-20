@@ -1,7 +1,7 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
-import Navbar from "../components/NavBar";
-import Footer from "../components/Footer";
+import Navbar from "../Components/NavBar";
+import Footer from "../Components/Footer";
 import {
   FaPhone,
   FaEnvelope,

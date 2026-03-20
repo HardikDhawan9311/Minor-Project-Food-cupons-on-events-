@@ -171,25 +171,6 @@ export default function Schedule() {
           <div className="relative bg-[#1a1a2e] border border-white/20 rounded-3xl p-8 shadow-2xl w-full max-w-md max-h-[80vh] overflow-y-auto">
             <h2 className="text-2xl font-bold mb-6 text-white text-center">Select Scan Session</h2>
             <div className="space-y-3">
-              <button
-                onClick={() => {
-                  setActiveMeal({ meal_id: "check_in", meal_name: "Check-In", event_id: selectedEvent.event_id });
-                  setShowMealPicker(false);
-                  setShowScanner(true);
-                }}
-                className={`w-full p-4 rounded-2xl transition text-left flex justify-between items-center ${
-                  activeMeal?.meal_id === "check_in" ? "bg-indigo-600 ring-2 ring-white" : "bg-indigo-600/40 hover:bg-indigo-600/60"
-                }`}
-              >
-                <span>🚀 Event Check-In</span>
-                {activeMeal?.meal_id === "check_in" && <span className="text-xs bg-white text-indigo-600 px-2 py-1 rounded-full font-bold">Active</span>}
-              </button>
-              
-              <div className="py-2 flex items-center gap-4">
-                <div className="flex-1 h-px bg-white/10"></div>
-                <span className="text-xs text-gray-500 uppercase tracking-widest">Available Meals</span>
-                <div className="flex-1 h-px bg-white/10"></div>
-              </div>
 
               {selectedEvent.allMeals && selectedEvent.allMeals.length > 0 ? (
                 selectedEvent.allMeals.map((meal) => (

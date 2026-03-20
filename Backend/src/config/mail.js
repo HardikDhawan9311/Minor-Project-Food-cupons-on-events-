@@ -1,11 +1,7 @@
-const nodemailer = require("nodemailer");
+const { BrevoClient } = require("@getbrevo/brevo");
+const dotenv = require("dotenv");
+dotenv.config();
 
-const transporter = nodemailer.createTransport({
-  service: "gmail",
-  auth: {
-    user: process.env.EMAIL_USER,   // put your Gmail in .env
-    pass: process.env.EMAIL_PASS    // use App Password
-  }
-});
+const client = new BrevoClient({ apiKey: process.env.BREVO_API_KEY });
 
-module.exports = transporter;
+module.exports = client;
