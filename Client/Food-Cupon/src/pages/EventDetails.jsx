@@ -303,6 +303,7 @@ import { AlertCircle } from "lucide-react";
 import Navbar from "../Components/NavBar";
 import { toast } from "react-hot-toast";
 import api from "../utils/api";
+import { formatDate, formatTime } from "../utils/formatters";
 
 export default function EventDetails() {
   const { id } = useParams();
@@ -402,8 +403,8 @@ export default function EventDetails() {
           <div>
             <h1 className="text-4xl font-bold mb-2">{event.event_name}</h1>
             <p className="text-gray-300">
-              📆 {new Date(event.start_date).toLocaleDateString()} →{" "}
-              {new Date(event.end_date).toLocaleDateString()}
+              📆 {formatDate(event.start_date)} →{" "}
+              {formatDate(event.end_date)}
             </p>
           </div>
 
@@ -443,8 +444,8 @@ export default function EventDetails() {
 
       {/* Event Dates */}
       <p className="text-gray-300 mb-6">
-        <b>Start:</b> {event.start_date} &nbsp; | &nbsp;
-        <b>End:</b> {event.end_date}
+        <b>Start:</b> {formatDate(event.start_date)} &nbsp; | &nbsp;
+        <b>End:</b> {formatDate(event.end_date)}
       </p>
 
       {/* Date Dropdown */}
@@ -483,8 +484,8 @@ export default function EventDetails() {
                     >
                       <span className="font-semibold">{meal.meal_name}</span>
                       <span>
-                        {meal.start_time?.slice(0, 5)} -{" "}
-                        {meal.end_time?.slice(0, 5)}
+                        {formatTime(meal.start_time)} -{" "}
+                        {formatTime(meal.end_time)}
                       </span>
                     </div>
                   ))}

@@ -1,8 +1,8 @@
 const express = require("express");
 const router = express.Router();
 
-const { signup } = require("../controllers/authController");
-const { signin } = require("../controllers/authController");
+const { signup, signin, changePassword, forgotPassword } = require("../controllers/authController");
+const { verifyToken } = require("../middleware/authmiddleware");
 
 router.post("/signup", async (req, res) => {
   try {
@@ -19,6 +19,24 @@ router.post("/signin", async (req, res) => {
   } catch (error) {
     console.error("❌ Route error:", error.message);
     res.status(500).json({ message: "Something went wrong in signin route" });
+  }
+});
+
+router.post("/change-password", verifyToken, async (req, res) => {
+  try {
+    await changePassword(req, res);
+  } catch (error) {
+    console.error("❌ Route error:", error.message);
+    res.status(500).json({ message: "Something went wrong in change-password route" });
+  }
+});
+
+router.post("/forgot-password", async (req, res) => {
+  try {
+    await forgotPassword(req, res);
+  } catch (error) {
+    console.error("❌ Route error:", error.message);
+    res.status(500).json({ message: "Something went wrong in forgot-password route" });
   }
 });
 

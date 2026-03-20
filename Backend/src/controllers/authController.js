@@ -139,6 +139,7 @@
 const db = require("../config/db");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
+const client = require("../config/mail");
 require("dotenv").config();
 
 // Utility function to create JWT token
@@ -249,5 +250,86 @@ const signin = async (req, res) => {
   }
 };
 
-module.exports = { signup, signin };
+// ---------------- CHANGE PASSWORD ----------------
+const changePassword = async (req, res) => {
+  try {
+    const { oldPassword, newPassword } = req.body;
+    const userId = req.user.id; 
+
+    if (!oldPassword || !newPassword) {
+      return res.status(400).json({ message: "Both old and new passwords are required" });
+    }
+
+    const [rows] = await db.execute("SELECT * FROM users WHERE id = ?", [userId]);
+    if (rows.length === 0) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    const user = rows[0];
+    const isMatch = await bcrypt.compare(oldPassword, user.password);
+    if (!isMatch) {
+      return res.status(401).json({ message: "Incorrect old password" });
+    }
+
+    const hashedNewPassword = await bcrypt.hash(newPassword, 10);
+    await db.execute("UPDATE users SET password = ? WHERE id = ?", [hashedNewPassword, userId]);
+
+    res.status(200).json({ message: "Password updated successfully 🎉" });
+  } catch (error) {
+    console.error("Change Password Error:", error);
+    res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+const generateRandomPassword = () => {
+  return Math.random().toString(36).slice(-8);
+};
+
+// ---------------- FORGOT PASSWORD ----------------
+const forgotPassword = async (req, res) => {
+  try {
+    const { username } = req.body;
+
+    if (!username) {
+      return res.status(400).json({ message: "Username is required" });
+    }
+
+    const [rows] = await db.execute("SELECT * FROM users WHERE username = ?", [username]);
+    if (rows.length === 0) {
+      return res.status(404).json({ message: "Username not found in our records." });
+    }
+
+    const user = rows[0];
+    const newTempPassword = generateRandomPassword();
+    const hashedPassword = await bcrypt.hash(newTempPassword, 10);
+
+    await db.execute("UPDATE users SET password = ? WHERE id = ?", [hashedPassword, user.id]);
+
+    const sendSmtpEmail = {
+      to: [{ email: user.email }],
+      sender: { email: process.env.EMAIL_USER || "noreply@event-team.com", name: "Event Team" },
+      subject: "Your New Temporary Password 🔑",
+      htmlContent: `
+        <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
+          <h2 style="color: #2c3e50;">Hello ${user.name},</h2>
+          <p>You have requested a password reset for your account (<strong>${user.username}</strong>).</p>
+          <div style="background-color: #f8f9fa; border-left: 5px solid #3498db; padding: 15px; margin: 20px 0;">
+            <p style="margin: 0; font-size: 16px;">Your new temporary password is: <strong style="color: #e74c3c;">${newTempPassword}</strong></p>
+          </div>
+          <p>Please log in using this temporary password and change it immediately from your profile dashboard for security reasons.</p>
+          <p style="margin-top: 30px;">Best Regards,<br><strong>Team Food Coupons</strong></p>
+        </div>
+      `,
+    };
+
+    await client.transactionalEmails.sendTransacEmail(sendSmtpEmail);
+
+    res.status(200).json({ message: "A temporary password has been sent to your registered email address." });
+  } catch (error) {
+    console.error("Forgot Password Error:", error);
+    res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+module.exports = { signup, signin, changePassword, forgotPassword };
 

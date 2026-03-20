@@ -3,7 +3,6 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-d
 import Signup from "./pages/Signup";
 import SignIn from "./pages/Signin";
 import Home from "./pages/Home";
-import Setting from "./pages/Settings";
 import ImportPage from "./pages/Import";
 import LogsPage from "./pages/Logs";
 import ProtectedRoute from "./Components/ProtectedRoute";
@@ -58,15 +57,6 @@ function App() {
           element={
             <ProtectedRoute>
               <Events />
-            </ProtectedRoute>
-          }
-        />
-
-        <Route
-          path="/settings"
-          element={
-            <ProtectedRoute>
-              <Setting />
             </ProtectedRoute>
           }
         />

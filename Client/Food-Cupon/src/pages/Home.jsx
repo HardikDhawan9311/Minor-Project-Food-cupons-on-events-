@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Gift, CalendarDays, X, Calendar, Clock, ArrowRight, Trash2, Edit3, Plus, Type, Upload, FileText } from "lucide-react";
 import { toast } from "react-hot-toast";
 import api from "../utils/api";
+import { formatDate } from "../utils/formatters";
 
 export default function Home() {
   const [showEventForm, setShowEventForm] = useState(false);
@@ -347,7 +348,7 @@ export default function Home() {
                       <div className="space-y-3 mb-8">
                         <div className="flex items-center text-gray-400 text-sm">
                           <Clock size={16} className="mr-3 text-[#7F5AF0]" />
-                          <span>{new Date(e.start_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })} - {new Date(e.end_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+                          <span>{formatDate(e.start_date)} - {formatDate(e.end_date)}</span>
                         </div>
                         <div className="flex items-center text-gray-400 text-sm">
                           <CalendarDays size={16} className="mr-3 text-[#7F5AF0]" />

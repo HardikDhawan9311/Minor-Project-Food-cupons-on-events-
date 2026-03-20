@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { toast } from "react-hot-toast";
 import api from "../utils/api";
+import { formatDate, formatTime } from "../utils/formatters";
 
 const normalizeDate = (d) => (typeof d === "string" ? d.slice(0, 10) : "");
 
@@ -206,7 +207,7 @@ export default function EditEvent() {
                       <option value="" className="bg-[#1A1625]">Choose a date...</option>
                       {allDates.map((d) => (
                         <option key={d} value={d} className="bg-[#1A1625] text-white">
-                          {new Date(d).toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' })}
+                          {formatDate(d)}
                         </option>
                       ))}
                     </select>
@@ -381,7 +382,7 @@ export default function EditEvent() {
                                 <h3 className="text-xl font-bold text-white group-hover:text-[#C77DFF] transition-colors">{m.meal_name}</h3>
                                 <div className="flex items-center gap-2 mt-2 text-gray-400 text-sm">
                                   <Clock size={14} />
-                                  <span>{m.start_time.slice(0, 5)} – {m.end_time.slice(0, 5)}</span>
+                                  <span>{formatTime(m.start_time)} – {formatTime(m.end_time)}</span>
                                 </div>
                               </div>
                             </div>

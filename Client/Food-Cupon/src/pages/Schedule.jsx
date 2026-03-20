@@ -5,6 +5,7 @@ import Navbar from "../Components/NavBar";
 import Footer from "../Components/Footer";
 import QRScannerModal from "../Components/QRScannerModal";
 import api from "../utils/api";
+import { formatDate, formatTime } from "../utils/formatters";
 
 export default function Schedule() {
   const [events, setEvents] = useState([]);
@@ -129,11 +130,11 @@ export default function Schedule() {
                 <div className="space-y-2 text-gray-300">
                   <p className="flex items-center gap-2">
                     <Clock size={16} className="text-green-400" />
-                    Start: {new Date(event.start_date).toLocaleDateString()}
+                    Start: {formatDate(event.start_date)}
                   </p>
                   <p className="flex items-center gap-2">
                     <Clock size={16} className="text-red-400" />
-                    End: {new Date(event.end_date).toLocaleDateString()}
+                    End: {formatDate(event.end_date)}
                   </p>
                 </div>
 
@@ -190,7 +191,7 @@ export default function Schedule() {
                       {activeMeal?.meal_id === meal.meal_id && <span className="text-[10px] bg-white text-[#7F5AF0] px-2 py-1 rounded-full font-bold">Active</span>}
                     </div>
                     <span className="text-xs opacity-60 mt-1">
-                      {new Date(meal.date).toLocaleDateString()} | {meal.start_time.substring(0, 5)} - {meal.end_time.substring(0, 5)}
+                      {formatDate(meal.date)} | {formatTime(meal.start_time)} - {formatTime(meal.end_time)}
                     </span>
                   </button>
                 ))

@@ -5,6 +5,7 @@ import Navbar from "../Components/NavBar";
 import Footer from "../Components/Footer";
 import { toast } from "react-hot-toast";
 import api from "../utils/api";
+import { formatDate, formatTime } from "../utils/formatters";
 
 export default function ParticipantDetails() {
   const { id } = useParams();
@@ -269,10 +270,10 @@ export default function ParticipantDetails() {
                           <div className="flex items-center gap-3 text-xs text-gray-400">
                              <span className="flex items-center gap-1">
                                <Calendar size={12} className="text-[#C77DFF]" />
-                               {new Date(meal.date).toLocaleDateString()}
+                               {formatDate(meal.date)}
                              </span>
                              <span className="h-1 w-1 rounded-full bg-gray-600"></span>
-                             <span>{meal.start_time.slice(0, 5)} - {meal.end_time.slice(0, 5)}</span>
+                             <span>{formatTime(meal.start_time)} - {formatTime(meal.end_time)}</span>
                           </div>
                         </div>
                       </div>

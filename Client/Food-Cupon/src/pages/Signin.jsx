@@ -145,20 +145,40 @@
 import { useState } from "react";
 import { FaUser, FaLock } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
-import { saveToken } from "../utils/auth";
+import { saveToken, decodeToken } from "../utils/auth";
 import { toast } from "react-hot-toast";
 import api from "../utils/api";
 
 const SignIn = () => {
-  const [formData, setFormData] = useState({ username: "", password: "" });
+  const [formData, setFormData] = useState({
+    username: "",
+    password: "",
+  });
+  const [loading, setLoading] = useState(false);
+  const [isForgotPassword, setIsForgotPassword] = useState(false);
   const navigate = useNavigate();
 
   const handleChange = (e) =>
     setFormData({ ...formData, [e.target.name]: e.target.value });
 
+  const handleForgotPassword = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    try {
+      await api.post("/auth/forgot-password", { username: formData.username });
+      toast.success("If an account with that username exists, a temporary password has been sent to your email.");
+      setIsForgotPassword(false);
+      setFormData({ ...formData, password: "" });
+    } catch (err) {
+      toast.error(err.response?.data?.message || err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
-
+    setLoading(true);
     try {
       const res = await api.post("/auth/signin", formData);
       saveToken(res.data.token);
@@ -166,47 +186,90 @@ const SignIn = () => {
       navigate("/home");
     } catch (err) {
       toast.error(err.response?.data?.message || err.message);
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#0F0C29] via-[#302B63] to-[#24243E]">
-      <div className="w-full max-w-md p-8 rounded-3xl bg-white/10 backdrop-blur-xl border border-white/20 shadow-2xl">
+        <div className="w-full max-w-md animate-slide-up bg-[#1A1625]/80 backdrop-blur-xl rounded-3xl p-8 border border-white/5 relative z-10 mx-4 shadow-2xl">
+          <div className="mb-10 text-center">
+            <h2 className="text-3xl font-bold bg-gradient-to-r from-[#7F5AF0] to-[#C77DFF] bg-clip-text text-transparent">
+              {isForgotPassword ? "Reset Password" : "Welcome Back"}
+            </h2>
+            <p className="text-gray-400 mt-2">
+              {isForgotPassword ? "Enter your username to receive a temporary password." : "Admin Gateway"}
+            </p>
+          </div>
 
-        <h2 className="text-3xl font-bold text-white text-center">
-          Welcome Back 👋
-        </h2>
-        <p className="text-gray-300 text-center mb-6">
-          Login to continue
-        </p>
-
-        <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={isForgotPassword ? handleForgotPassword : handleSubmit} className="space-y-6">
           {/* Username */}
           <div className="relative">
             <FaUser className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300" />
             <input
+              type="text"
               name="username"
               placeholder="Username"
+              value={formData.username}
               onChange={handleChange}
               className="w-full pl-12 py-3 rounded-xl bg-white/15 text-white placeholder-gray-300 outline-none focus:ring-2 focus:ring-[#7F5AF0]"
             />
           </div>
 
-          {/* Password */}
-          <div className="relative">
-            <FaLock className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300" />
-            <input
-              type="password"
-              name="password"
-              placeholder="Password"
-              onChange={handleChange}
-              className="w-full pl-12 py-3 rounded-xl bg-white/15 text-white placeholder-gray-300 outline-none focus:ring-2 focus:ring-[#7F5AF0]"
-            />
-          </div>
+          {!isForgotPassword && (
+            <>
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2 ml-1">
+                  Password
+                </label>
+                <div className="relative group">
+                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-gray-500 group-focus-within:text-[#7F5AF0] transition-colors">
+                    <FaLock size={20} />
+                  </div>
+                  <input
+                    type="password"
+                    name="password"
+                    placeholder="Enter admin password"
+                    value={formData.password}
+                    onChange={handleChange}
+                    required
+                    className="w-full pl-12 pr-4 py-3.5 bg-[#0D0B14] border border-white/10 rounded-2xl text-white placeholder-gray-500 focus:outline-none focus:border-[#7F5AF0] focus:ring-1 focus:ring-[#7F5AF0] transition-all"
+                  />
+                </div>
+              </div>
 
-          <button className="w-full py-3 rounded-xl bg-gradient-to-r from-[#7F5AF0] to-[#C77DFF] text-white font-semibold hover:scale-[1.02] transition">
-            Sign In
+              <div className="flex justify-end">
+                <button 
+                  type="button" 
+                  onClick={() => { setIsForgotPassword(true); setFormData({ username: formData.username, password: "" }); }} 
+                  className="text-sm font-medium text-[#C77DFF] hover:underline"
+                >
+                  Forgot Password?
+                </button>
+              </div>
+            </>
+          )}
+
+          <button 
+            type="submit"
+            disabled={loading}
+            className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-[#7F5AF0] to-[#C77DFF] text-white font-semibold hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50 shadow-lg shadow-[#7F5AF0]/20"
+          >
+            {loading ? "Processing..." : isForgotPassword ? "Send Reset Email" : "Sign In"}
           </button>
+          
+          {isForgotPassword && (
+            <div className="text-center mt-4">
+               <button 
+                 type="button" 
+                 onClick={() => setIsForgotPassword(false)} 
+                 className="text-sm font-medium text-gray-400 hover:text-white"
+               >
+                 Back to Sign In
+               </button>
+            </div>
+          )}
         </form>
 
         <p className="text-center text-sm text-gray-300 mt-6">
