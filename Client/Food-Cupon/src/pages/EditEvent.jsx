@@ -17,6 +17,7 @@ import {
   Trash2
 } from "lucide-react";
 import { toast } from "react-hot-toast";
+import api from "../utils/api";
 
 const normalizeDate = (d) => (typeof d === "string" ? d.slice(0, 10) : "");
 
@@ -30,12 +31,12 @@ export default function EditEvent() {
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
-    fetch(`http://localhost:5000/events/${id}`)
-      .then((r) => r.json())
-      .then((d) => {
-        setEvent(d.event);
-        setMealDays(d.meals || []);
-      });
+    api.get(`/events/${id}`)
+      .then((res) => {
+        setEvent(res.data.event);
+        setMealDays(res.data.meals || []);
+      })
+      .catch((err) => console.error("Fetch Error:", err));
   }, [id]);
 
   const getDateRange = (s, e) => {
@@ -99,25 +100,17 @@ export default function EditEvent() {
     setIsSaving(true);
 
     try {
-      const res = await fetch(`http://localhost:5000/events/${id}/meals/saveAll`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ date: selectedDate, meals: combinedMeals }),
+      await api.post(`/events/${id}/meals/saveAll`, { 
+        date: selectedDate, 
+        meals: combinedMeals 
       });
-
-      if (!res.ok) {
-        const d = await res.json();
-        toast.error(`Failed to save meals: ${d.message || "Unknown error"}`);
-        return;
-      }
 
       toast.success("Schedule synced successfully! 🍕");
 
       setTempMeals([]);
       // Refresh meal list
-      const refreshRes = await fetch(`http://localhost:5000/events/${id}`);
-      const d = await refreshRes.json();
-      setMealDays(d.meals || []);
+      const d = await api.get(`/events/${id}`);
+      setMealDays(d.data.meals || []);
     } catch (error) {
       console.error("Error saving meals:", error);
     } finally {
@@ -133,22 +126,15 @@ export default function EditEvent() {
       const updatedDayMeals = dayData.meals.filter(meal => meal.meal_id !== m.meal_id);
       
       try {
-        const deleteRes = await fetch(`http://localhost:5000/events/${id}/meals/saveAll`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ date: selectedDate, meals: updatedDayMeals }),
+        await api.post(`/events/${id}/meals/saveAll`, { 
+          date: selectedDate, 
+          meals: updatedDayMeals 
         });
 
-        if (deleteRes.ok) {
-          toast.success("Meal deleted successfully.");
-          // Refresh meal list
-          const refreshRes = await fetch(`http://localhost:5000/events/${id}`);
-          const d = await refreshRes.json();
-          setMealDays(d.meals || []);
-        } else {
-          const errorData = await res.json();
-          toast.error(`Failed to delete meal: ${errorData.message || 'Unknown error'}`);
-        }
+        toast.success("Meal deleted successfully.");
+        // Refresh meal list
+        const d = await api.get(`/events/${id}`);
+        setMealDays(d.data.meals || []);
       } catch (error) {
         console.error("Error deleting meal:", error);
         toast.error("An error occurred while deleting the meal.");

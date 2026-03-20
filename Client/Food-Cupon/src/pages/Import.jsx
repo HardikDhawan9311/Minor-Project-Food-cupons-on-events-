@@ -4,6 +4,7 @@ import { UploadCloud, FileSpreadsheet, ArrowLeft } from "lucide-react";
 import { useParams, useNavigate } from "react-router-dom";
 import Navbar from "../Components/NavBar";
 import { toast } from "react-hot-toast";
+import api from "../utils/api";
 
 export default function ImportPage() {
   const { id } = useParams();
@@ -24,7 +25,7 @@ export default function ImportPage() {
 
   const fetchEventDetails = async () => {
     try {
-      const res = await axios.get(`http://localhost:5000/events/${id}`);
+      const res = await api.get(`/events/${id}`);
       setEventName(res.data.event.event_name);
       setSelectedEvent(id);
     } catch (err) {
@@ -34,7 +35,7 @@ export default function ImportPage() {
 
   const fetchEvents = async () => {
     try {
-      const res = await axios.get("http://localhost:5000/events");
+      const res = await api.get("/events");
       setEvents(res.data || []);
       if (res.data?.length && !selectedEvent) setSelectedEvent(res.data[0].event_id);
     } catch (err) {
@@ -63,8 +64,8 @@ export default function ImportPage() {
 
     try {
       const toastId = toast.loading("Uploading participants...");
-      const response = await axios.post(
-        "http://localhost:5000/participants/upload-excel",
+      const response = await api.post(
+        "/participants/upload-excel",
         formData,
         { headers: { "Content-Type": "multipart/form-data" } }
       );

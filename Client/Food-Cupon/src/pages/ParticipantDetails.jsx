@@ -4,6 +4,7 @@ import { ArrowLeft, Mail, CheckCircle, XCircle, Info, Calendar } from "lucide-re
 import Navbar from "../Components/NavBar";
 import Footer from "../Components/Footer";
 import { toast } from "react-hot-toast";
+import api from "../utils/api";
 
 export default function ParticipantDetails() {
   const { id } = useParams();
@@ -22,15 +23,11 @@ export default function ParticipantDetails() {
 
   const fetchParticipantDetails = async () => {
     try {
-      const res = await fetch(`http://localhost:5000/participants/${id}`);
-      const data = await res.json();
-      if (res.ok) {
-        setParticipant(data);
-        fetchTeamMembers(data.event_id, data.team_name);
-        fetchMealSchedule();
-      } else {
-        toast.error(data.error || "Failed to fetch participant details");
-      }
+      setLoading(true);
+      const res = await api.get(`/participants/${id}`);
+      setParticipant(res.data);
+      fetchTeamMembers(res.data.event_id, res.data.team_name);
+      fetchMealSchedule();
     } catch (err) {
       console.error("Failed to fetch participant details:", err);
       toast.error("An error occurred while fetching details");
@@ -41,24 +38,18 @@ export default function ParticipantDetails() {
 
   const fetchTeamMembers = async (eventId, teamName) => {
     try {
-      const res = await fetch(`http://localhost:5000/participants/event/${eventId}/team/${encodeURIComponent(teamName)}`);
-      const data = await res.json();
-      if (res.ok) {
-        setTeamMembers(data.filter(m => m.id.toString() !== id.toString()));
-      }
+      const res = await api.get(`/participants/event/${eventId}/team/${encodeURIComponent(teamName)}`);
+      setTeamMembers(res.data.filter(m => m.id.toString() !== id.toString()));
     } catch (err) {
       console.error("Failed to fetch team members:", err);
     }
   };
 
   const fetchMealSchedule = async () => {
-    setFetchingMeals(true);
     try {
-      const res = await fetch(`http://localhost:5000/participants/${id}/meals`);
-      const data = await res.json();
-      if (res.ok) {
-        setMealSchedule(data);
-      }
+      setFetchingMeals(true);
+      const res = await api.get(`/participants/${id}/meals`);
+      setMealSchedule(res.data);
     } catch (err) {
       console.error("Failed to fetch meal schedule:", err);
     } finally {
@@ -67,22 +58,13 @@ export default function ParticipantDetails() {
   };
 
   const handleToggleMeal = async (mealId) => {
-    setTogglingMealId(mealId);
     try {
-      const res = await fetch(`http://localhost:5000/participants/${id}/toggle-meal/${mealId}`, {
-        method: "POST",
-      });
-      const data = await res.json();
-      if (res.ok) {
-        toast.success(data.message);
-        // Refresh schedule and participant details to update counts
-        fetchMealSchedule();
-        const pRes = await fetch(`http://localhost:5000/participants/${id}`);
-        const pData = await pRes.json();
-        if (pRes.ok) setParticipant(pData);
-      } else {
-        toast.error(data.error || "Failed to toggle meal");
-      }
+      setTogglingMealId(mealId);
+      const res = await api.post(`/participants/${id}/toggle-meal/${mealId}`);
+      toast.success(res.data.message);
+      fetchMealSchedule();
+      const pRes = await api.get(`/participants/${id}`);
+      setParticipant(pRes.data);
     } catch (err) {
       console.error("Toggle meal error:", err);
       toast.error("An error occurred");
@@ -92,22 +74,14 @@ export default function ParticipantDetails() {
   };
 
   const handleSendMail = async () => {
-    setSendingMail(true);
     try {
-      const res = await fetch("http://localhost:5000/emails/send-single", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ 
-          participant_id: id,
-          event_id: participant.event_id 
-        }),
+      setSendingMail(true);
+      const toastId = toast.loading("Sending Meal Pass PDF...");
+      const res = await api.post("/emails/send-single", { 
+        participant_id: id,
+        event_id: participant.event_id 
       });
-      const data = await res.json();
-      if (res.ok) {
-        toast.success(data.message || "Email sent successfully!");
-      } else {
-        toast.error(data.message || "Failed to send email");
-      }
+      toast.success(res.data.message || "Meal Pass email sent successfully! 🚀", { id: toastId });
     } catch (err) {
       console.error("Failed to send mail:", err);
       toast.error("An error occurred while sending email");

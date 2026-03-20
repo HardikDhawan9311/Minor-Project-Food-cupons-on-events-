@@ -4,6 +4,7 @@ import { Link } from "react-router-dom";
 import Navbar from "../Components/NavBar";
 import Footer from "../Components/Footer";
 import QRScannerModal from "../Components/QRScannerModal";
+import api from "../utils/api";
 
 export default function Schedule() {
   const [events, setEvents] = useState([]);
@@ -15,10 +16,9 @@ export default function Schedule() {
   const [showMealPicker, setShowMealPicker] = useState(false);
 
   useEffect(() => {
-    fetch("http://localhost:5000/events")
-      .then((res) => res.json())
-      .then((data) => {
-        setEvents(data);
+    api.get("/events")
+      .then((res) => {
+        setEvents(res.data);
         setLoading(false);
       })
       .catch(() => setLoading(false));
@@ -29,8 +29,8 @@ export default function Schedule() {
     
     // Store all event meals to show in picker if needed
     try {
-      const res = await fetch(`http://localhost:5000/events/${event.event_id}`);
-      const data = await res.json();
+      const res = await api.get(`/events/${event.event_id}`);
+      const data = res.data;
       
       // Save all meals for the picker
       const allMeals = [];

@@ -3,6 +3,7 @@ import { Search, ArrowLeft } from "lucide-react";
 import { useParams, useNavigate } from "react-router-dom";
 import Navbar from "../Components/NavBar";
 import Footer from "../Components/Footer";
+import api from "../utils/api";
 
 export default function Logs() {
   const { id } = useParams();
@@ -28,9 +29,8 @@ export default function Logs() {
 
   const fetchEventDetails = async () => {
     try {
-      const res = await fetch(`http://localhost:5000/events/${id}`);
-      const data = await res.json();
-      setEventName(data.event.event_name);
+      const res = await api.get(`/events/${id}`);
+      setEventName(res.data.event.event_name);
       setSelectedEvent(id);
     } catch (err) {
       console.error("Failed to fetch event details:", err);
@@ -39,22 +39,22 @@ export default function Logs() {
 
   const fetchEvents = async () => {
     try {
-      const res = await fetch("http://localhost:5000/events");
-      const data = await res.json();
-      setEvents(data || []);
-      if (data?.length && !selectedEvent) setSelectedEvent(data[0].event_id);
+      const res = await api.get("/events");
+      setEvents(res.data || []);
+      if (res.data?.length && !selectedEvent) setSelectedEvent(res.data[0].event_id);
     } catch (err) {
       console.error("Failed to fetch events:", err);
     }
   };
 
   const fetchLogs = async () => {
-    const res = await fetch(
-      `http://localhost:5000/participants/logs?event_id=${selectedEvent}`
-    );
-    const data = await res.json();
-    setParticipants(data);
-    groupByTeam(data);
+    try {
+      const res = await api.get(`/participants/logs?event_id=${selectedEvent}`);
+      setParticipants(res.data);
+      groupByTeam(res.data);
+    } catch (err) {
+      console.error("Failed to fetch logs:", err);
+    }
   };
 
   const groupByTeam = (data) => {

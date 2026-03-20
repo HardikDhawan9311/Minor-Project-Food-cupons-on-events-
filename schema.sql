@@ -1,0 +1,55 @@
+-- Database Schema for Food Coupons Project
+
+CREATE TABLE IF NOT EXISTS users (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  name VARCHAR(100) NOT NULL,
+  username VARCHAR(50) UNIQUE NOT NULL,
+  email VARCHAR(100) NOT NULL,
+  password VARCHAR(255) NOT NULL,
+  role VARCHAR(20) DEFAULT 'user',
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS events (
+  event_id INT AUTO_INCREMENT PRIMARY KEY,
+  event_name VARCHAR(255) UNIQUE NOT NULL,
+  start_date DATE NOT NULL,
+  end_date DATE NOT NULL,
+  enabled BOOLEAN DEFAULT TRUE,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS event_meals (
+  meal_id INT AUTO_INCREMENT PRIMARY KEY,
+  event_id INT NOT NULL,
+  date DATE NOT NULL,
+  meal_name VARCHAR(100) NOT NULL,
+  start_time TIME NOT NULL,
+  end_time TIME NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (event_id) REFERENCES events(event_id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS participants (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  event_id INT NOT NULL,
+  team_name VARCHAR(100) NOT NULL,
+  name VARCHAR(100) NOT NULL,
+  email VARCHAR(100) NOT NULL,
+  check_in BOOLEAN DEFAULT FALSE,
+  meals_eaten INT DEFAULT 0,
+  token_id VARCHAR(20) UNIQUE NOT NULL,
+  qr_code LONGTEXT,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (event_id) REFERENCES events(event_id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS meal_scans (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  participant_id INT NOT NULL,
+  meal_id INT NOT NULL,
+  scanned_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY unique_meal_scan (participant_id, meal_id),
+  FOREIGN KEY (participant_id) REFERENCES participants(id) ON DELETE CASCADE,
+  FOREIGN KEY (meal_id) REFERENCES event_meals(meal_id) ON DELETE CASCADE
+);

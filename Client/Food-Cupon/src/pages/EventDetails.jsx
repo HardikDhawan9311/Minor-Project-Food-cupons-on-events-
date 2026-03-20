@@ -302,6 +302,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { AlertCircle } from "lucide-react";
 import Navbar from "../Components/NavBar";
 import { toast } from "react-hot-toast";
+import api from "../utils/api";
 
 export default function EventDetails() {
   const { id } = useParams();
@@ -314,11 +315,10 @@ export default function EventDetails() {
 
   // ✅ Fetch event + meals
   useEffect(() => {
-    fetch(`http://localhost:5000/events/${id}`)
-      .then((res) => res.json())
-      .then((data) => {
-        setEvent(data.event);
-        setMealDays(data.meals);
+    api.get(`/events/${id}`)
+      .then((res) => {
+        setEvent(res.data.event);
+        setMealDays(res.data.meals);
         setLoading(false);
       })
       .catch((err) => {
@@ -345,28 +345,10 @@ export default function EventDetails() {
     const toastId = toast.loading("Generating QR Codes & Sending Emails...");
     try {
       /* 1️⃣ Generate QR Code */
-      const qrRes = await fetch(
-        "http://localhost:5000/generation/auto_generated_qr_code",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ event_id: id }),
-        }
-      );
-
-      if (!qrRes.ok) throw new Error("QR generation failed");
+      await api.post("/generation/auto_generated_qr_code", { event_id: id });
 
       /* 2️⃣ Send Email */
-      const emailRes = await fetch(
-        "http://localhost:5000/emails/send-all",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ event_id: id }),
-        }
-      );
-
-      if (!emailRes.ok) throw new Error("Email sending failed");
+      await api.post("/emails/send-all", { event_id: id });
 
       toast.success("All QR Emails sent successfully! 🚀", { id: toastId });
     } catch (error) {
@@ -382,8 +364,7 @@ export default function EventDetails() {
   }, [event]);
 
   const toggleEvent = () => {
-    fetch(`http://localhost:5000/events/${id}/toggle`, { method: "PUT" })
-      .then((res) => res.json())
+    api.put(`/events/${id}/toggle`)
       .then(() => {
         setStatus(status === 1 ? 0 : 1);
       })
@@ -394,8 +375,7 @@ export default function EventDetails() {
     if (window.confirm("Are you sure you want to delete this event? This will also delete all participants and meals.")) {
       const toastId = toast.loading("Deleting event...");
       try {
-        const res = await fetch(`http://localhost:5000/events/${id}`, { method: "DELETE" });
-        if (!res.ok) throw new Error("Failed to delete event");
+        await api.delete(`/events/${id}`);
         toast.success("Event deleted successfully", { id: toastId });
         navigate("/home");
       } catch (err) {

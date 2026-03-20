@@ -171,6 +171,7 @@ import { FaUser, FaLock, FaEnvelope } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
 import { saveToken } from "../utils/auth";
 import { toast } from "react-hot-toast";
+import api from "../utils/api";
 
 const SignUp = () => {
   const [formData, setFormData] = useState({
@@ -188,19 +189,11 @@ const SignUp = () => {
     e.preventDefault();
 
     try {
-      const res = await fetch("http://localhost:5000/auth/signup", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
-      });
-
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message);
-
+      await api.post("/auth/signup", formData);
       toast.success("Account created! Please ask an administrator to activate your account. 🚀", { duration: 6000 });
       navigate("/signin");
     } catch (err) {
-      toast.error(err.message);
+      toast.error(err.response?.data?.message || err.message);
     }
   };
 

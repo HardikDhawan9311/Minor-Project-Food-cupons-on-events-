@@ -147,6 +147,7 @@ import { FaUser, FaLock } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
 import { saveToken } from "../utils/auth";
 import { toast } from "react-hot-toast";
+import api from "../utils/api";
 
 const SignIn = () => {
   const [formData, setFormData] = useState({ username: "", password: "" });
@@ -159,20 +160,12 @@ const SignIn = () => {
     e.preventDefault();
 
     try {
-      const res = await fetch("http://localhost:5000/auth/signin", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
-      });
-
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message);
-
-      saveToken(data.token);
+      const res = await api.post("/auth/signin", formData);
+      saveToken(res.data.token);
       toast.success("Login successful! 🎉");
       navigate("/home");
     } catch (err) {
-      toast.error(err.message);
+      toast.error(err.response?.data?.message || err.message);
     }
   };
 

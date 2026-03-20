@@ -5,6 +5,7 @@ import Footer from "../Components/Footer";
 import { motion, AnimatePresence } from "framer-motion";
 import { Gift, CalendarDays, X, Calendar, Clock, ArrowRight, Trash2, Edit3, Plus, Type, Upload, FileText } from "lucide-react";
 import { toast } from "react-hot-toast";
+import api from "../utils/api";
 
 export default function Home() {
   const [showEventForm, setShowEventForm] = useState(false);
@@ -21,9 +22,12 @@ export default function Home() {
   }, []);
 
   const fetchEvents = async () => {
-    const res = await fetch("http://localhost:5000/events");
-    const data = await res.json();
-    setEvents(data || []);
+    try {
+      const res = await api.get("/events");
+      setEvents(res.data || []);
+    } catch (err) {
+      console.error("Fetch events error:", err);
+    }
   };
 
   const handleChange = (e) =>
@@ -50,26 +54,13 @@ export default function Home() {
     }
     
     try {
-      const res = await fetch("http://localhost:5000/events/create", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(eventData),
-      });
-      
-      const data = await res.json();
-      
-      if (!res.ok) {
-        toast.error(data.message || "Failed to create event");
-        return;
-      }
-
+      await api.post("/events/create", eventData);
       toast.success("Event created successfully! 🎊");
-
       setShowEventForm(false);
       setEventData({ event_name: "", start_date: "", end_date: "" });
       fetchEvents();
     } catch (err) {
-      toast.error("Server connection failed. Please try again.");
+      toast.error(err.response?.data?.message || "Server connection failed. Please try again.");
       console.error("Create event error:", err);
     }
   };
@@ -333,12 +324,11 @@ export default function Home() {
                               if (window.confirm("Are you sure you want to delete this event? This will also delete all participants and meals.")) {
                                 const toastId = toast.loading("Deleting event...");
                                 try {
-                                  const res = await fetch(`http://localhost:5000/events/${e.event_id}`, { method: "DELETE" });
-                                  if (!res.ok) throw new Error("Failed to delete event");
+                                  await api.delete(`/events/${e.event_id}`);
                                   toast.success("Event deleted successfully", { id: toastId });
                                   fetchEvents();
                                 } catch (err) {
-                                  toast.error(err.message, { id: toastId });
+                                  toast.error(err.response?.data?.message || err.message, { id: toastId });
                                 }
                               }
                             }}

@@ -5,6 +5,7 @@ import Footer from "../Components/Footer";
 import { motion } from "framer-motion";
 import { CalendarDays, Calendar, Clock, ArrowRight, Trash2, LayoutGrid, History, Upload, FileText } from "lucide-react";
 import { toast } from "react-hot-toast";
+import api from "../utils/api";
 
 export default function Events() {
   const [events, setEvents] = useState([]);
@@ -17,9 +18,8 @@ export default function Events() {
   const fetchEvents = async () => {
     try {
       setLoading(true);
-      const res = await fetch("http://localhost:5000/events");
-      const data = await res.json();
-      setEvents(data || []);
+      const res = await api.get("/events");
+      setEvents(res.data || []);
     } catch (err) {
       console.error("Fetch events error:", err);
     } finally {
@@ -84,8 +84,7 @@ export default function Events() {
                   if (window.confirm("Are you sure you want to delete this event? This will also delete all participants and meals.")) {
                     const toastId = toast.loading("Deleting event...");
                     try {
-                      const res = await fetch(`http://localhost:5000/events/${e.event_id}`, { method: "DELETE" });
-                      if (!res.ok) throw new Error("Failed to delete event");
+                      await api.delete(`/events/${e.event_id}`);
                       toast.success("Event deleted successfully", { id: toastId });
                       fetchEvents();
                     } catch (err) {
